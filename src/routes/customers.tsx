@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { DesktopLayout, Panel, Field, Input, Select } from "@/components/desktop/DesktopLayout";
 import { CUSTOMERS, fmt } from "@/lib/sample-data";
+import { useState } from "react";
+import { useERPCommands } from "@/lib/erp-context";
 
 export const Route = createFileRoute("/customers")({
   head: () => ({ meta: [{ title: "Customer Master — MyShop Retail Pro" }] }),
@@ -8,14 +10,114 @@ export const Route = createFileRoute("/customers")({
 });
 
 function Customers() {
-  const c = CUSTOMERS[0];
+  const [customerList, setCustomerList] = useState(CUSTOMERS.map((c) => ({ ...c })));
+  const [selectedCode, setSelectedCode] = useState<string | null>(CUSTOMERS[0]?.code || null);
+  const [mode, setMode] = useState<"View" | "New" | "Edit">("View");
+
+  // Selection data state
+  const selectedCustomer = customerList.find((c) => c.code === selectedCode) || customerList[0];
+  const [formName, setFormName] = useState(selectedCustomer?.name || "");
+  const [formMobile, setFormMobile] = useState(selectedCustomer?.mobile || "");
+  const [formCity, setFormCity] = useState(selectedCustomer?.city || "");
+  const [formOpening, setFormOpening] = useState(selectedCustomer?.opening || 0);
+
+  const handleSelectCustomer = (code: string) => {
+    const cust = customerList.find((c) => c.code === code);
+    if (cust) {
+      setSelectedCode(code);
+      setFormName(cust.name);
+      setFormMobile(cust.mobile);
+      setFormCity(cust.city);
+      setFormOpening(cust.opening);
+      setMode("View");
+    }
+  };
+
+  const handleSave = () => {
+    if (mode === "New") {
+      const newCode = `CUST${String(customerList.length + 1).padStart(3, "0")}`;
+      const newCust = {
+        code: newCode,
+        name: formName,
+        mobile: formMobile,
+        city: formCity,
+        opening: formOpening,
+        limit: 10000,
+        status: "Active"
+      };
+      setCustomerList([...customerList, newCust]);
+      setSelectedCode(newCode);
+      alert("New Customer saved successfully!");
+    } else if (mode === "Edit" && selectedCode) {
+      setCustomerList(
+        customerList.map((c) =>
+          c.code === selectedCode
+            ? { ...c, name: formName, mobile: formMobile, city: formCity, opening: formOpening }
+            : c
+        )
+      );
+      alert("Customer details updated successfully!");
+    }
+    setMode("View");
+  };
+
+  const handleDelete = () => {
+    if (!selectedCode) return;
+    if (confirm(`Are you sure you want to delete customer ${selectedCode}?`)) {
+      const updated = customerList.filter((c) => c.code !== selectedCode);
+      setCustomerList(updated);
+      setSelectedCode(updated[0]?.code || null);
+      if (updated[0]) {
+        setFormName(updated[0].name);
+        setFormMobile(updated[0].mobile);
+        setFormCity(updated[0].city);
+        setFormOpening(updated[0].opening);
+      }
+      setMode("View");
+      alert("Customer deleted successfully!");
+    }
+  };
+
+  // Register with commands Context
+  useERPCommands({
+    pageName: "customers",
+    availableCommands: ["NEW", "EDIT", "DELETE", "SAVE", "PRINT"],
+    selectedRecordId: selectedCode,
+    isDirty: mode !== "View",
+    onCommand: (cmd) => {
+      if (cmd === "NEW") {
+        setMode("New");
+        setFormName("");
+        setFormMobile("");
+        setFormCity("Indore");
+        setFormOpening(0);
+      } else if (cmd === "EDIT") {
+        if (selectedCode) {
+          setMode("Edit");
+        }
+      } else if (cmd === "DELETE") {
+        handleDelete();
+      } else if (cmd === "SAVE") {
+        handleSave();
+      } else if (cmd === "PRINT") {
+        alert("Generating print preview for customer records...");
+        window.print();
+      }
+    }
+  });
+
   return (
-    <DesktopLayout fnKeys={[
-      { key: "F1", label: "Help" }, { key: "F2", label: "New" }, { key: "F3", label: "Edit" },
-      { key: "F4", label: "Delete", tone: "danger" }, { key: "F5", label: "Save", tone: "primary" },
-      { key: "F6", label: "Print" }, { key: "F7", label: "Ledger" }, { key: "F8", label: "Receivable" },
-      { key: "F9", label: "SMS" }, { key: "F10", label: "E-Mail" }, { key: "F11", label: "Import" }, { key: "F12", label: "Close" },
-    ]}>
+    <DesktopLayout
+      fnKeys={[
+        { key: "F1", label: "Help" },
+        { key: "F2", label: "New (F2)", onClick: () => { setMode("New"); setFormName(""); setFormMobile(""); setFormOpening(0); } },
+        { key: "F3", label: "Edit (F3)", onClick: () => selectedCode && setMode("Edit") },
+        { key: "F4", label: "Delete (F4)", tone: "danger", onClick: handleDelete },
+        { key: "F5", label: "Save (F5)", tone: "primary", onClick: handleSave },
+        { key: "F6", label: "Cancel", onClick: () => setMode("View") },
+        { key: "F7", label: "Print Ledger", onClick: () => window.print() }
+      ]}
+    >
       <div className="grid grid-cols-2 gap-3">
         <Panel title="Search / Select Customer">
           <div className="mb-2 flex gap-2">
@@ -24,54 +126,120 @@ function Customers() {
             <button className="rounded-sm bg-primary px-3 text-primary-foreground text-[12.5px]">Search (F3)</button>
           </div>
           <table className="erp-grid">
-            <thead><tr>
-              <th className="erp-grid-th w-10">S.No</th><th className="erp-grid-th">Code</th><th className="erp-grid-th">Name</th>
-              <th className="erp-grid-th">Mobile</th><th className="erp-grid-th">City</th>
-              <th className="erp-grid-th text-right">Opening Bal</th><th className="erp-grid-th text-right">Limit</th><th className="erp-grid-th">Status</th>
-            </tr></thead>
-            <tbody>{CUSTOMERS.map((c, i) => (
-              <tr key={c.code} className={i%2 ? "bg-[color:var(--color-grid-row-alt)]" : ""}>
-                <td className="erp-grid-td text-center">{i+1}</td><td className="erp-grid-td">{c.code}</td>
-                <td className="erp-grid-td">{c.name}</td><td className="erp-grid-td">{c.mobile}</td>
-                <td className="erp-grid-td">{c.city}</td>
-                <td className="erp-grid-td text-right text-destructive">{fmt(c.opening)} Dr</td>
-                <td className="erp-grid-td text-right">{fmt(c.limit)}</td>
-                <td className="erp-grid-td text-[color:var(--color-success)] font-semibold">{c.status}</td>
+            <thead>
+              <tr>
+                <th className="erp-grid-th w-10">S.No</th>
+                <th className="erp-grid-th">Code</th>
+                <th className="erp-grid-th">Name</th>
+                <th className="erp-grid-th">Mobile</th>
+                <th className="erp-grid-th">City</th>
+                <th className="erp-grid-th text-right">Opening Bal</th>
+                <th className="erp-grid-th text-right">Limit</th>
+                <th className="erp-grid-th">Status</th>
               </tr>
-            ))}</tbody>
+            </thead>
+            <tbody>
+              {customerList.map((c, i) => (
+                <tr
+                  key={c.code}
+                  onClick={() => handleSelectCustomer(c.code)}
+                  className={`cursor-pointer transition-colors ${
+                    selectedCode === c.code
+                      ? "bg-primary/10 font-medium"
+                      : i % 2
+                      ? "bg-[color:var(--color-grid-row-alt)] hover:bg-accent/40"
+                      : "hover:bg-accent/40"
+                  }`}
+                >
+                  <td className="erp-grid-td text-center">{i + 1}</td>
+                  <td className="erp-grid-td">{c.code}</td>
+                  <td className="erp-grid-td">{c.name}</td>
+                  <td className="erp-grid-td">{c.mobile}</td>
+                  <td className="erp-grid-td">{c.city}</td>
+                  <td className="erp-grid-td text-right text-destructive">{fmt(c.opening)} Dr</td>
+                  <td className="erp-grid-td text-right">{fmt(c.limit)}</td>
+                  <td className="erp-grid-td text-[color:var(--color-success)] font-semibold">{c.status}</td>
+                </tr>
+              ))}
+            </tbody>
           </table>
           <div className="mt-2 grid grid-cols-5 gap-2">
-            <Stat label="Total Customers" value="320"/>
-            <Stat label="Active" value="315" tone="text-[color:var(--color-success)]"/>
-            <Stat label="Inactive" value="5" tone="text-destructive"/>
-            <Stat label="Receivable" value={`₹ ${fmt(51130)}`}/>
-            <Stat label="Credit Limit" value={`₹ ${fmt(875000)}`}/>
+            <Stat label="Total Customers" value={customerList.length.toString()}/>
+            <Stat label="Active" value={customerList.filter((c) => c.status === "Active").length.toString()} tone="text-[color:var(--color-success)]"/>
+            <Stat label="Inactive" value={customerList.filter((c) => c.status !== "Active").length.toString()} tone="text-destructive"/>
+            <Stat label="Receivable" value={`₹ ${fmt(customerList.reduce((acc, c) => acc + c.opening, 0))}`}/>
+            <Stat label="Credit Limit" value={`₹ ${fmt(customerList.reduce((acc, c) => acc + c.limit, 0))}`}/>
           </div>
         </Panel>
 
-        <Panel title="Customer Details (Edit Mode)">
+        <Panel title={`Customer Details (${mode} Mode)`}>
           <div className="space-y-2">
-            <Field label="Customer Code"><Input defaultValue={c.code}/></Field>
-            <Field label="Customer Name"><Input defaultValue={c.name}/></Field>
-            <Field label="Group"><Select><option>RETAIL CUSTOMERS</option></Select></Field>
-            <Field label="Mobile No"><Input defaultValue={c.mobile}/></Field>
-            <Field label="E-Mail"><Input defaultValue="rahulkumar@gmail.com"/></Field>
-            <Field label="City"><Select><option>{c.city}</option></Select></Field>
-            <Field label="Address"><Input defaultValue="Madhya Pradesh — 452001"/></Field>
-            <Field label="GST Number"><Input defaultValue="23ABCDE1234F1Z5"/></Field>
-            <Field label="Opening Balance"><Input defaultValue={fmt(c.opening)} className="text-right text-destructive"/></Field>
-            <Field label="Credit Limit"><Input defaultValue={fmt(c.limit)} className="text-right"/></Field>
-            <Field label="Credit Days"><Input defaultValue="30"/></Field>
-            <Field label="Price Level"><Select><option>LEVEL 1</option></Select></Field>
-            <Field label="Salesman"><Select><option>AMIT</option></Select></Field>
-            <Field label="Remarks"><Input defaultValue="Regular customer. Good payment."/></Field>
-            <label className="flex items-center gap-2 pt-1"><input type="checkbox" defaultChecked/> Active</label>
+            <Field label="Customer Code">
+              <Input value={mode === "New" ? "AUTO" : selectedCustomer?.code} disabled />
+            </Field>
+            <Field label="Customer Name">
+              <Input
+                value={formName}
+                onChange={(e) => setFormName(e.target.value)}
+                disabled={mode === "View"}
+              />
+            </Field>
+            <Field label="Group">
+              <Select disabled={mode === "View"}>
+                <option>RETAIL CUSTOMERS</option>
+              </Select>
+            </Field>
+            <Field label="Mobile No">
+              <Input
+                value={formMobile}
+                onChange={(e) => setFormMobile(e.target.value)}
+                disabled={mode === "View"}
+              />
+            </Field>
+            <Field label="E-Mail">
+              <Input defaultValue="rahulkumar@gmail.com" disabled={mode === "View"} />
+            </Field>
+            <Field label="City">
+              <Select value={formCity} onChange={(e) => setFormCity(e.target.value)} disabled={mode === "View"}>
+                <option value="Indore">Indore</option>
+                <option value="Dewas">Dewas</option>
+                <option value="Bhopal">Bhopal</option>
+              </Select>
+            </Field>
+            <Field label="Address">
+              <Input defaultValue="Madhya Pradesh — 452001" disabled={mode === "View"} />
+            </Field>
+            <Field label="GST Number">
+              <Input defaultValue="23ABCDE1234F1Z5" disabled={mode === "View"} />
+            </Field>
+            <Field label="Opening Balance">
+              <Input
+                type="number"
+                value={formOpening}
+                onChange={(e) => setFormOpening(Number(e.target.value) || 0)}
+                disabled={mode === "View"}
+                className="text-right text-destructive"
+              />
+            </Field>
+            <Field label="Credit Limit">
+              <Input defaultValue={fmt(selectedCustomer?.limit || 10000)} disabled={mode === "View"} className="text-right" />
+            </Field>
+            <Field label="Credit Days">
+              <Input defaultValue="30" disabled={mode === "View"} />
+            </Field>
+            <Field label="Remarks">
+              <Input defaultValue="Regular customer. Good payment." disabled={mode === "View"} />
+            </Field>
+            <label className="flex items-center gap-2 pt-1">
+              <input type="checkbox" defaultChecked disabled={mode === "View"} /> Active
+            </label>
           </div>
         </Panel>
       </div>
     </DesktopLayout>
   );
 }
+
 function Stat({ label, value, tone="" }: any) {
   return <div className="erp-panel px-3 py-2"><div className="text-[11.5px] text-primary">{label}</div><div className={`text-[14px] font-bold ${tone}`}>{value}</div></div>;
 }

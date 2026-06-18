@@ -1,10 +1,13 @@
-import { type ReactNode } from "react";
+import { type ReactNode, useEffect } from "react";
 import { Link, useRouter, useRouterState } from "@tanstack/react-router";
 import {
   FilePlus, Pencil, Trash2, Save, Printer, Barcode, Package, PauseCircle,
-  RotateCcw, Wallet, Boxes, LayoutDashboard, Users, Calculator, Power,
+  RotateCcw, Wallet, Boxes, LayoutDashboard, Users, Calculator as CalcIcon, Power,
   Minus, Square, X, ChevronDown
 } from "lucide-react";
+import { useToolbar } from "@/lib/erp-context";
+import Calculator from "./Calculator";
+import BarcodeGenerator from "./BarcodeGenerator";
 
 type MenuItem = { label: string; items?: { label: string; to?: string }[] };
 
@@ -42,21 +45,21 @@ const MENU: MenuItem[] = [
 ];
 
 const TOOLS = [
-  { icon: FilePlus, label: "New" },
-  { icon: Pencil, label: "Edit" },
-  { icon: Trash2, label: "Delete", danger: true },
-  { icon: Save, label: "Save" },
-  { icon: Printer, label: "Print" },
-  { icon: Barcode, label: "Barcode" },
-  { icon: Package, label: "Item" },
-  { icon: PauseCircle, label: "Hold" },
-  { icon: RotateCcw, label: "Recall" },
-  { icon: Wallet, label: "Expense" },
-  { icon: Boxes, label: "Stock" },
-  { icon: LayoutDashboard, label: "Dashboard", to: "/" },
-  { icon: Users, label: "User" },
-  { icon: Calculator, label: "Calculator" },
-  { icon: Power, label: "Exit", danger: true, to: "/login" },
+  { icon: FilePlus, label: "New", cmd: "NEW" },
+  { icon: Pencil, label: "Edit", cmd: "EDIT" },
+  { icon: Trash2, label: "Delete", danger: true, cmd: "DELETE" },
+  { icon: Save, label: "Save", cmd: "SAVE" },
+  { icon: Printer, label: "Print", cmd: "PRINT" },
+  { icon: Barcode, label: "Barcode", cmd: "BARCODE" },
+  { icon: Package, label: "Item", cmd: "ITEM" },
+  { icon: PauseCircle, label: "Hold", cmd: "HOLD" },
+  { icon: RotateCcw, label: "Recall", cmd: "RECALL" },
+  { icon: Wallet, label: "Expense", cmd: "EXPENSE" },
+  { icon: Boxes, label: "Stock", cmd: "STOCK" },
+  { icon: LayoutDashboard, label: "Dashboard", cmd: "DASHBOARD" },
+  { icon: Users, label: "User", cmd: "USER" },
+  { icon: CalcIcon, label: "Calculator", cmd: "CALCULATOR" },
+  { icon: Power, label: "Exit", danger: true, cmd: "EXIT" },
 ];
 
 const TITLES: Record<string, string> = {
@@ -88,6 +91,32 @@ export function DesktopLayout({
   const time = now.toLocaleTimeString("en-IN", { hour12: false });
   const date = now.toLocaleDateString("en-GB");
 
+  const {
+    isCommandAvailable,
+    isCalculatorOpen,
+    setCalculatorOpen,
+    isBarcodeModalOpen,
+    setBarcodeModalOpen,
+    dispatchCommand
+  } = useToolbar();
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key.startsWith("F") && e.key.length > 1) {
+        const num = parseInt(e.key.substring(1));
+        if (num >= 1 && num <= 12) {
+          e.preventDefault();
+          const k = fnKeys?.[num - 1];
+          if (k && k.onClick) {
+            k.onClick();
+          }
+        }
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [fnKeys]);
+
   return (
     <div className="flex h-screen flex-col bg-background text-foreground select-none">
       {/* Title bar */}
@@ -100,7 +129,7 @@ export function DesktopLayout({
         <div className="flex items-center gap-1">
           <button className="grid h-6 w-9 place-items-center hover:bg-white/15"><Minus className="h-3.5 w-3.5"/></button>
           <button className="grid h-6 w-9 place-items-center hover:bg-white/15"><Square className="h-3 w-3"/></button>
-          <button className="grid h-6 w-9 place-items-center hover:bg-destructive"><X className="h-3.5 w-3.5"/></button>
+          <button onClick={() => dispatchCommand("EXIT")} className="grid h-6 w-9 place-items-center hover:bg-destructive"><X className="h-3.5 w-3.5"/></button>
         </div>
       </div>
 
@@ -132,22 +161,33 @@ export function DesktopLayout({
       {/* Toolbar */}
       <div className="flex items-center gap-1 border-b border-border bg-toolbar px-2 py-1.5">
         {TOOLS.map((t, i) => {
-          const Inner = (
-            <div className="flex h-14 w-[64px] flex-col items-center justify-center gap-1 rounded-sm border border-transparent text-[11px] hover:border-border hover:bg-accent">
+          const enabled = isCommandAvailable(t.cmd);
+          return (
+            <button
+              key={i}
+              type="button"
+              disabled={!enabled}
+              onClick={() => dispatchCommand(t.cmd)}
+              className={`flex h-14 w-[64px] flex-col items-center justify-center gap-1 rounded-sm border border-transparent text-[11px] select-none ${
+                enabled
+                  ? "hover:border-border hover:bg-accent cursor-pointer opacity-100"
+                  : "opacity-40 cursor-not-allowed"
+              }`}
+            >
               <t.icon className={`h-5 w-5 ${t.danger ? "text-destructive" : "text-primary"}`}/>
               <span>{t.label}</span>
-            </div>
-          );
-          return t.to ? (
-            <Link key={i} to={t.to}>{Inner}</Link>
-          ) : (
-            <button key={i} type="button" onClick={() => router.navigate({ to: "/pos" })}>{Inner}</button>
+            </button>
           );
         })}
       </div>
 
       {/* Body */}
       <div className="flex-1 overflow-auto bg-background p-2.5">{children}</div>
+
+      {/* Floating global structures */}
+      {isCalculatorOpen && <Calculator onClose={() => setCalculatorOpen(false)} />}
+      {isBarcodeModalOpen && <BarcodeGenerator onClose={() => setBarcodeModalOpen(false)} />}
+
 
       {/* F-key bar */}
       {fnKeys && fnKeys.length > 0 && (
