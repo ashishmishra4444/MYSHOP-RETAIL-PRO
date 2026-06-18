@@ -1,0 +1,157 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius-sm: 2px;
+  --radius-md: 3px;
+  --radius-lg: 4px;
+  --radius-xl: 6px;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-titlebar: var(--titlebar);
+  --color-titlebar-foreground: var(--titlebar-foreground);
+  --color-menubar: var(--menubar);
+  --color-toolbar: var(--toolbar);
+  --color-panel-header: var(--panel-header);
+  --color-panel-header-foreground: var(--panel-header-foreground);
+  --color-grid-header: var(--grid-header);
+  --color-grid-row-alt: var(--grid-row-alt);
+  --color-status-bar: var(--status-bar);
+  --color-status-bar-foreground: var(--status-bar-foreground);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --font-sans: "Segoe UI", "Inter", system-ui, -apple-system, sans-serif;
+}
+
+:root {
+  --radius: 0.25rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.20 0.02 250);
+
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.20 0.02 250);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.20 0.02 250);
+
+  /* Deep corporate navy */
+  --primary: oklch(0.38 0.13 258);
+  --primary-foreground: oklch(0.99 0 0);
+
+  --secondary: oklch(0.96 0.012 250);
+  --secondary-foreground: oklch(0.25 0.04 258);
+  --muted: oklch(0.965 0.008 250);
+  --muted-foreground: oklch(0.48 0.02 250);
+  --accent: oklch(0.94 0.03 240);
+  --accent-foreground: oklch(0.25 0.08 258);
+
+  --destructive: oklch(0.55 0.22 27);
+  --destructive-foreground: oklch(0.99 0 0);
+  --success: oklch(0.55 0.15 145);
+  --warning: oklch(0.70 0.17 60);
+
+  --border: oklch(0.88 0.012 250);
+  --input: oklch(0.92 0.01 250);
+  --ring: oklch(0.55 0.12 258);
+
+  --titlebar: oklch(0.32 0.13 260);
+  --titlebar-foreground: oklch(0.99 0 0);
+  --menubar: oklch(0.97 0.008 250);
+  --toolbar: oklch(0.985 0.005 250);
+  --panel-header: oklch(0.42 0.14 258);
+  --panel-header-foreground: oklch(0.99 0 0);
+  --grid-header: oklch(0.96 0.02 80);
+  --grid-row-alt: oklch(0.985 0.005 250);
+  --status-bar: oklch(0.94 0.01 250);
+  --status-bar-foreground: oklch(0.30 0.03 250);
+
+  --chart-1: oklch(0.50 0.18 258);
+  --chart-2: oklch(0.65 0.16 160);
+  --chart-3: oklch(0.70 0.18 60);
+  --chart-4: oklch(0.60 0.22 25);
+  --chart-5: oklch(0.55 0.20 300);
+}
+
+.dark { --background: oklch(0.18 0.02 250); --foreground: oklch(0.97 0 0); }
+
+@layer base {
+  * { border-color: var(--color-border); }
+  html, body, #root { height: 100%; }
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    font-size: 13px;
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+@utility erp-grid {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+@utility erp-grid-th {
+  background-color: var(--color-grid-header);
+  color: var(--color-foreground);
+  font-weight: 600;
+  text-align: left;
+  padding: 6px 8px;
+  border: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+@utility erp-grid-td {
+  padding: 5px 8px;
+  border: 1px solid var(--color-border);
+  background: white;
+}
+@utility erp-panel {
+  border: 1px solid var(--color-border);
+  background: white;
+  border-radius: 3px;
+  overflow: hidden;
+}
+@utility erp-panel-header {
+  background: linear-gradient(180deg, oklch(0.46 0.14 258), oklch(0.38 0.13 258));
+  color: white;
+  font-weight: 600;
+  padding: 6px 12px;
+  font-size: 12.5px;
+}
+@utility erp-input {
+  height: 28px;
+  border: 1px solid var(--color-input);
+  background: white;
+  padding: 0 8px;
+  border-radius: 2px;
+  font-size: 13px;
+  outline: none;
+}
+@utility erp-input-focus {
+  border-color: var(--color-ring);
+  box-shadow: 0 0 0 2px oklch(0.55 0.12 258 / 0.15);
+}
