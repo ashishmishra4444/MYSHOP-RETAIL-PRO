@@ -23,6 +23,11 @@ const MENU: MenuItem[] = [
   ]},
   { label: "Purchase", items: [{ label: "Purchase Entry", to: "/purchase" }] },
   { label: "Inventory", items: [{ label: "Stock Items", to: "/inventory" }] },
+  { label: "Marketing", items: [
+    { label: "Campaign Manager", to: "/campaigns" },
+    { label: "Broadcast Logs", to: "/notifications" },
+    { label: "Festival Calendar", to: "/festival-calendar" },
+  ]},
   { label: "Accounts", items: [
     { label: "Udhar Khata (Customer Ledger)", to: "/udhar" },
     { label: "Supplier Ledger", to: "/suppliers" },
@@ -75,6 +80,9 @@ const TITLES: Record<string, string> = {
   "/cashbook": "Daily Cash Book",
   "/reports": "Reports",
   "/sales-invoice": "Sales Invoice",
+  "/campaigns": "Campaign Manager",
+  "/notifications": "Broadcast Logs",
+  "/festival-calendar": "Festival Calendar",
 };
 
 export function DesktopLayout({

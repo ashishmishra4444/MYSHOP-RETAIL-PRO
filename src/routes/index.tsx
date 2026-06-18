@@ -3,6 +3,7 @@ import { DesktopLayout, Panel } from "@/components/desktop/DesktopLayout";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, CartesianGrid } from "recharts";
 import { SALES_TREND, TOP_SELLING, CUSTOMERS, SUPPLIERS, fmt } from "@/lib/sample-data";
 import { TrendingUp, ShoppingBag, ReceiptText, CreditCard } from "lucide-react";
+import { CAMPAIGNS, FESTIVALS, CAMPAIGN_LOGS } from "@/lib/marketing-store";
 
 export const Route = createFileRoute("/")({
   head: () => ({ meta: [{ title: "Dashboard — MyShop Retail Pro" }, { name: "description", content: "Business summary, sales, purchases and profit overview." }] }),
@@ -133,6 +134,62 @@ function Dashboard() {
               <div className="flex justify-between"><span>Total Stock Value (MRP)</span><b>₹ {fmt(1875680)}</b></div>
               <div className="flex justify-between"><span>Total Stock Value (Sales)</span><b>₹ {fmt(1642350)}</b></div>
             </div>
+          </div>
+        </div>
+
+        {/* Festival Campaign Marketing Widgets */}
+        <div className="mt-3 grid grid-cols-[1fr_400px] gap-3">
+          <div className="erp-panel">
+            <div className="border-b border-border bg-secondary px-3 py-1.5 text-[12.5px] font-semibold text-primary">Active Promotional Campaigns &amp; Broadcast Logs</div>
+            <table className="erp-grid">
+              <thead>
+                <tr>
+                  <th className="erp-grid-th">Campaign Name</th>
+                  <th className="erp-grid-th">Offer Detail</th>
+                  <th className="erp-grid-th">Target</th>
+                  <th className="erp-grid-th text-center">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {CAMPAIGNS.slice(0, 4).map(c => (
+                  <tr key={c.id}>
+                    <td className="erp-grid-td font-semibold">{c.name}</td>
+                    <td className="erp-grid-td">{c.offerTitle}</td>
+                    <td className="erp-grid-td text-indigo-700 font-semibold">{c.targetAudience}</td>
+                    <td className="erp-grid-td text-center">
+                      <span className={`px-2 py-0.5 rounded-sm text-[10px] font-bold ${
+                        c.status === "Active"
+                          ? "bg-[color:var(--color-success)] text-white"
+                          : c.status === "Scheduled"
+                          ? "bg-blue-600 text-white"
+                          : "bg-slate-500 text-white"
+                      }`}>{c.status}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="erp-panel">
+            <div className="border-b border-border bg-secondary px-3 py-1.5 text-[12.5px] font-semibold text-primary">Upcoming Festival Countdown</div>
+            <table className="erp-grid">
+              <thead>
+                <tr>
+                  <th className="erp-grid-th">Festival</th>
+                  <th className="erp-grid-th">Date</th>
+                  <th className="erp-grid-th text-center">Countdown</th>
+                </tr>
+              </thead>
+              <tbody>
+                {FESTIVALS.filter(f => f.daysRemaining >= 0).slice(0, 4).map(f => (
+                  <tr key={f.id}>
+                    <td className="erp-grid-td font-semibold">{f.name}</td>
+                    <td className="erp-grid-td font-mono">{f.date}</td>
+                    <td className="erp-grid-td text-center font-bold text-[#0047BA]">{f.daysRemaining} Days</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       </Panel>

@@ -16,11 +16,14 @@ import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as PurchaseRouteImport } from './routes/purchase'
 import { Route as ProductsRouteImport } from './routes/products'
 import { Route as PosRouteImport } from './routes/pos'
+import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as InventoryRouteImport } from './routes/inventory'
+import { Route as FestivalCalendarRouteImport } from './routes/festival-calendar'
 import { Route as ExpensesRouteImport } from './routes/expenses'
 import { Route as CustomersRouteImport } from './routes/customers'
 import { Route as CashbookRouteImport } from './routes/cashbook'
+import { Route as CampaignsRouteImport } from './routes/campaigns'
 import { Route as IndexRouteImport } from './routes/index'
 
 const UdharRoute = UdharRouteImport.update({
@@ -58,6 +61,11 @@ const PosRoute = PosRouteImport.update({
   path: '/pos',
   getParentRoute: () => rootRouteImport,
 } as any)
+const NotificationsRoute = NotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -66,6 +74,11 @@ const LoginRoute = LoginRouteImport.update({
 const InventoryRoute = InventoryRouteImport.update({
   id: '/inventory',
   path: '/inventory',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FestivalCalendarRoute = FestivalCalendarRouteImport.update({
+  id: '/festival-calendar',
+  path: '/festival-calendar',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ExpensesRoute = ExpensesRouteImport.update({
@@ -83,6 +96,11 @@ const CashbookRoute = CashbookRouteImport.update({
   path: '/cashbook',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CampaignsRoute = CampaignsRouteImport.update({
+  id: '/campaigns',
+  path: '/campaigns',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -91,11 +109,14 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/campaigns': typeof CampaignsRoute
   '/cashbook': typeof CashbookRoute
   '/customers': typeof CustomersRoute
   '/expenses': typeof ExpensesRoute
+  '/festival-calendar': typeof FestivalCalendarRoute
   '/inventory': typeof InventoryRoute
   '/login': typeof LoginRoute
+  '/notifications': typeof NotificationsRoute
   '/pos': typeof PosRoute
   '/products': typeof ProductsRoute
   '/purchase': typeof PurchaseRoute
@@ -106,11 +127,14 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/campaigns': typeof CampaignsRoute
   '/cashbook': typeof CashbookRoute
   '/customers': typeof CustomersRoute
   '/expenses': typeof ExpensesRoute
+  '/festival-calendar': typeof FestivalCalendarRoute
   '/inventory': typeof InventoryRoute
   '/login': typeof LoginRoute
+  '/notifications': typeof NotificationsRoute
   '/pos': typeof PosRoute
   '/products': typeof ProductsRoute
   '/purchase': typeof PurchaseRoute
@@ -122,11 +146,14 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/campaigns': typeof CampaignsRoute
   '/cashbook': typeof CashbookRoute
   '/customers': typeof CustomersRoute
   '/expenses': typeof ExpensesRoute
+  '/festival-calendar': typeof FestivalCalendarRoute
   '/inventory': typeof InventoryRoute
   '/login': typeof LoginRoute
+  '/notifications': typeof NotificationsRoute
   '/pos': typeof PosRoute
   '/products': typeof ProductsRoute
   '/purchase': typeof PurchaseRoute
@@ -139,11 +166,14 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/campaigns'
     | '/cashbook'
     | '/customers'
     | '/expenses'
+    | '/festival-calendar'
     | '/inventory'
     | '/login'
+    | '/notifications'
     | '/pos'
     | '/products'
     | '/purchase'
@@ -154,11 +184,14 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/campaigns'
     | '/cashbook'
     | '/customers'
     | '/expenses'
+    | '/festival-calendar'
     | '/inventory'
     | '/login'
+    | '/notifications'
     | '/pos'
     | '/products'
     | '/purchase'
@@ -169,11 +202,14 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/campaigns'
     | '/cashbook'
     | '/customers'
     | '/expenses'
+    | '/festival-calendar'
     | '/inventory'
     | '/login'
+    | '/notifications'
     | '/pos'
     | '/products'
     | '/purchase'
@@ -185,11 +221,14 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CampaignsRoute: typeof CampaignsRoute
   CashbookRoute: typeof CashbookRoute
   CustomersRoute: typeof CustomersRoute
   ExpensesRoute: typeof ExpensesRoute
+  FestivalCalendarRoute: typeof FestivalCalendarRoute
   InventoryRoute: typeof InventoryRoute
   LoginRoute: typeof LoginRoute
+  NotificationsRoute: typeof NotificationsRoute
   PosRoute: typeof PosRoute
   ProductsRoute: typeof ProductsRoute
   PurchaseRoute: typeof PurchaseRoute
@@ -250,6 +289,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PosRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/notifications': {
+      id: '/notifications'
+      path: '/notifications'
+      fullPath: '/notifications'
+      preLoaderRoute: typeof NotificationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -262,6 +308,13 @@ declare module '@tanstack/react-router' {
       path: '/inventory'
       fullPath: '/inventory'
       preLoaderRoute: typeof InventoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/festival-calendar': {
+      id: '/festival-calendar'
+      path: '/festival-calendar'
+      fullPath: '/festival-calendar'
+      preLoaderRoute: typeof FestivalCalendarRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/expenses': {
@@ -285,6 +338,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CashbookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/campaigns': {
+      id: '/campaigns'
+      path: '/campaigns'
+      fullPath: '/campaigns'
+      preLoaderRoute: typeof CampaignsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -297,11 +357,14 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CampaignsRoute: CampaignsRoute,
   CashbookRoute: CashbookRoute,
   CustomersRoute: CustomersRoute,
   ExpensesRoute: ExpensesRoute,
+  FestivalCalendarRoute: FestivalCalendarRoute,
   InventoryRoute: InventoryRoute,
   LoginRoute: LoginRoute,
+  NotificationsRoute: NotificationsRoute,
   PosRoute: PosRoute,
   ProductsRoute: ProductsRoute,
   PurchaseRoute: PurchaseRoute,
