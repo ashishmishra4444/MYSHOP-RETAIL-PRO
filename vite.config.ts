@@ -12,7 +12,10 @@ export default defineConfig({
     // nitro/vite builds from this
     server: { entry: "server" },
   },
+<<<<<<< HEAD
   nitro: {
     preset: "vercel",
   },
+=======
+>>>>>>> c6b8ae420873f8baa33701ea28053d1a69a0baaf
 });
