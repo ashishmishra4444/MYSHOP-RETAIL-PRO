@@ -30,7 +30,25 @@ function Inventory() {
   const router = useRouter();
 
   // State Management
-  const [productList, setProductList] = useState<ProductItem[]>(INITIAL_PRODUCTS);
+  const [productList, setProductList] = useState<ProductItem[]>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("myshop_products");
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch (e) {
+          console.error("Failed to load products from localStorage", e);
+        }
+      }
+    }
+    return INITIAL_PRODUCTS;
+  });
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("myshop_products", JSON.stringify(productList));
+    }
+  }, [productList]);
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterGroup, setFilterGroup] = useState("All Groups");

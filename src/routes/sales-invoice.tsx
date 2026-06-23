@@ -46,8 +46,22 @@ function SalesInvoice() {
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
   const [activeModal, setActiveModal] = useState<"HELP" | "ADD_ITEM" | "EDIT_ITEM" | "RECEIPT" | null>(null);
 
+  const [productList, setProductList] = useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("myshop_products");
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch (e) {
+          console.error("Failed to load products from localStorage", e);
+        }
+      }
+    }
+    return PRODUCTS;
+  });
+
   // Modal Input state
-  const [selectedProductCode, setSelectedProductCode] = useState(PRODUCTS[0]?.code || "");
+  const [selectedProductCode, setSelectedProductCode] = useState(() => productList[0]?.code || "");
   const [inputQty, setInputQty] = useState("1");
   const [inputRate, setInputRate] = useState("100");
 
@@ -62,7 +76,7 @@ function SalesInvoice() {
   }, []);
 
   useEffect(() => {
-    const prod = PRODUCTS.find(p => p.code === selectedProductCode);
+    const prod = productList.find(p => p.code === selectedProductCode);
     if (prod) {
       setInputRate(prod.rate.toString());
     }
@@ -83,7 +97,7 @@ function SalesInvoice() {
   const balanceDue = invoiceTotal - advanceVal;
 
   const handleAddItem = () => {
-    const prod = PRODUCTS.find(p => p.code === selectedProductCode);
+    const prod = productList.find(p => p.code === selectedProductCode);
     if (!prod) return;
 
     const qty = parseFloat(inputQty);
@@ -405,7 +419,7 @@ function SalesInvoice() {
                 {activeModal === "ADD_ITEM" ? (
                   <Field label="Choose Product">
                     <Select value={selectedProductCode} onChange={(e) => setSelectedProductCode(e.target.value)}>
-                      {PRODUCTS.map(p => <option key={p.code} value={p.code}>{p.name} ({p.code})</option>)}
+                      {productList.map(p => <option key={p.code} value={p.code}>{p.name} ({p.code})</option>)}
                     </Select>
                   </Field>
                 ) : (

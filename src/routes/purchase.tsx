@@ -78,8 +78,22 @@ function Purchase() {
   // Past invoice navigation index
   const [pastInvoiceIdx, setPastInvoiceIdx] = useState<number | null>(null);
 
+  const [productList, setProductList] = useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("myshop_products");
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch (e) {
+          console.error("Failed to load products from localStorage", e);
+        }
+      }
+    }
+    return PRODUCTS;
+  });
+
   // Add/Edit Product Item State
-  const [selectedProductCode, setSelectedProductCode] = useState(PRODUCTS[0]?.code || "");
+  const [selectedProductCode, setSelectedProductCode] = useState(() => productList[0]?.code || "");
   const [inputQty, setInputQty] = useState("1");
   const [inputRate, setInputRate] = useState("100");
   const [inputDisc, setInputDisc] = useState("0");
@@ -96,7 +110,7 @@ function Purchase() {
 
   // Sync rate when product selection changes in Add Item modal
   useEffect(() => {
-    const prod = PRODUCTS.find(p => p.code === selectedProductCode);
+    const prod = productList.find(p => p.code === selectedProductCode);
     if (prod) {
       setInputRate(prod.rate.toString());
     }
@@ -111,7 +125,7 @@ function Purchase() {
   const balance = netAmount - amountPaid;
 
   const handleAddItem = () => {
-    const prod = PRODUCTS.find(p => p.code === selectedProductCode);
+    const prod = productList.find(p => p.code === selectedProductCode);
     if (!prod) return;
 
     const qty = parseFloat(inputQty);
@@ -419,7 +433,7 @@ function Purchase() {
                 {activeModal === "ADD_ITEM" ? (
                   <Field label="Choose Product">
                     <Select value={selectedProductCode} onChange={(e) => setSelectedProductCode(e.target.value)}>
-                      {PRODUCTS.map(p => <option key={p.code} value={p.code}>{p.name} ({p.code})</option>)}
+                      {productList.map(p => <option key={p.code} value={p.code}>{p.name} ({p.code})</option>)}
                     </Select>
                   </Field>
                 ) : (

@@ -13,6 +13,19 @@ export const Route = createFileRoute("/pos")({
 import { PRODUCTS, CUSTOMERS } from "@/lib/sample-data";
 
 function POS() {
+  const [productList, setProductList] = useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("myshop_products");
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch (e) {
+          console.error("Failed to load products from localStorage", e);
+        }
+      }
+    }
+    return PRODUCTS;
+  });
   const [recallOpen, setRecallOpen] = useState(false);
   const [activePOSModal, setActivePOSModal] = useState<"PAYMENT" | "STOCK_CHECK" | "CUSTOMER_PICK" | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<"CASH" | "CARD" | "UPI" | "MULTI">("CASH");
@@ -361,7 +374,7 @@ function POS() {
                   </tr>
                 </thead>
                 <tbody>
-                  {PRODUCTS.filter(p => p.name.toLowerCase().includes(stockSearch.toLowerCase()) || p.code.toLowerCase().includes(stockSearch.toLowerCase())).map((p) => (
+                  {productList.filter(p => p.name.toLowerCase().includes(stockSearch.toLowerCase()) || p.code.toLowerCase().includes(stockSearch.toLowerCase())).map((p) => (
                     <tr key={p.code}>
                       <td className="erp-grid-td font-mono">{p.code}</td>
                       <td className="erp-grid-td font-semibold">{p.name}</td>

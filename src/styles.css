@@ -155,3 +155,24 @@
   border-color: var(--color-ring);
   box-shadow: 0 0 0 2px oklch(0.55 0.12 258 / 0.15);
 }
+
+@media print {
+  /* Hide the main app root */
+  body > :not(.print-report) {
+    display: none !important;
+  }
+  /* Show only the print-report container */
+  body > .print-report {
+    display: block !important;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    background: white !important;
+    color: black !important;
+    visibility: visible !important;
+  }
+  .print-report * {
+    visibility: visible !important;
+  }
+}

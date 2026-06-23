@@ -33,6 +33,19 @@ function Mini({ label, value, tone = "", onClick }: any) {
 }
 
 function Dashboard() {
+  const [productList, setProductList] = useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("myshop_products");
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch (e) {
+          console.error("Failed to load products from localStorage", e);
+        }
+      }
+    }
+    return PRODUCTS;
+  });
   const [activeModal, setActiveModal] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const profit = [{ name: "Gross", value: 27080, c: "var(--color-chart-2)" }, { name: "Exp", value: 9650, c: "var(--color-destructive)" }];
@@ -376,7 +389,7 @@ function Dashboard() {
                 <div className="space-y-3 bg-white p-3 border rounded-sm">
                   <div className="flex justify-between border-b pb-1.5">
                     <span className="font-bold text-primary text-sm">Real-time Stock Items Inventory</span>
-                    <span className="font-mono text-xs text-muted-foreground">Total: {PRODUCTS.length} Skus</span>
+                    <span className="font-mono text-xs text-muted-foreground">Total: {productList.length} Skus</span>
                   </div>
                   <table className="erp-grid w-full">
                     <thead>
@@ -390,7 +403,7 @@ function Dashboard() {
                       </tr>
                     </thead>
                     <tbody>
-                      {PRODUCTS.map((p) => {
+                      {productList.map((p) => {
                         const isLow = p.stock <= p.reorder;
                         return (
                           <tr key={p.code}>

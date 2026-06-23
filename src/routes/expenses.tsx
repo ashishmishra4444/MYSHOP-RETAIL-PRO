@@ -23,7 +23,26 @@ function Expenses() {
   const router = useRouter();
 
   // State management
-  const [expenseList, setExpenseList] = useState<ExpenseEntry[]>(INITIAL_EXPENSES.map(e => ({ ...e, mode: "Cash" })));
+  const [expenseList, setExpenseList] = useState<ExpenseEntry[]>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("myshop_expenses");
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch (e) {
+          console.error("Failed to load expenses from localStorage", e);
+        }
+      }
+    }
+    return INITIAL_EXPENSES.map(e => ({ ...e, mode: "Cash" }));
+  });
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("myshop_expenses", JSON.stringify(expenseList));
+    }
+  }, [expenseList]);
+
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
   const [activeModal, setActiveModal] = useState<"HELP" | "FILTER" | "REPORT" | "CATEGORY" | null>(null);
 
@@ -69,6 +88,7 @@ function Expenses() {
       };
       setExpenseList(updated);
       toast.success("Expense entry updated successfully!");
+      alert("Expense entry updated successfully!");
       setEditMode(false);
       setSelectedIdx(null);
     } else {
@@ -82,6 +102,7 @@ function Expenses() {
       };
       setExpenseList([...expenseList, newEntry]);
       toast.success("New expense entry saved successfully!");
+      alert("New expense entry added successfully!");
     }
 
     // Reset inputs
