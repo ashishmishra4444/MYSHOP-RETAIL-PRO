@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { Link, useRouter, useRouterState } from "@tanstack/react-router";
 import {
   FilePlus, Pencil, Trash2, Save, Printer, Barcode, Package, PauseCircle,
@@ -95,9 +95,20 @@ export function DesktopLayout({
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const router = useRouter();
   const sub = TITLES[pathname] ?? "";
-  const now = new Date();
-  const time = now.toLocaleTimeString("en-IN", { hour12: false });
-  const date = now.toLocaleDateString("en-GB");
+  const [timeStr, setTimeStr] = useState("");
+  const [dateStr, setDateStr] = useState("");
+
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date();
+      setTimeStr(now.toLocaleTimeString("en-IN", { hour12: false }));
+      setDateStr(now.toLocaleDateString("en-GB"));
+    };
+    
+    updateTime(); // set immediately on client mount
+    const timer = setInterval(updateTime, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const {
     isCommandAvailable,
@@ -114,7 +125,8 @@ export function DesktopLayout({
         const num = parseInt(e.key.substring(1));
         if (num >= 1 && num <= 12) {
           e.preventDefault();
-          const k = fnKeys?.[num - 1];
+          const targetKey = `F${num}`;
+          const k = fnKeys?.find(item => item.key === targetKey);
           if (k && k.onClick) {
             k.onClick();
           }
@@ -224,8 +236,8 @@ export function DesktopLayout({
         <div className="flex items-center gap-4">
           <span>User : <b className="text-foreground">ADMIN</b></span>
           <span>Role : ADMIN</span>
-          <span>{date}</span>
-          <span>{time}</span>
+          <span>{dateStr}</span>
+          <span>{timeStr}</span>
           <span>RC433</span>
           <span>POS-01</span>
         </div>

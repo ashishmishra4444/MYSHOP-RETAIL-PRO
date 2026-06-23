@@ -112,6 +112,7 @@ function RootShell({ children }: { children: ReactNode }) {
 }
 
 import { ToolbarProvider } from "@/lib/erp-context";
+import { Toaster } from "sonner";
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
@@ -121,6 +122,7 @@ function RootComponent() {
       <ToolbarProvider>
         {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
         <Outlet />
+        <Toaster position="bottom-right" richColors />
       </ToolbarProvider>
     </QueryClientProvider>
   );

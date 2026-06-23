@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { DesktopLayout, Panel, Field, Input, Select } from "@/components/desktop/DesktopLayout";
 import { CUSTOMERS, fmt } from "@/lib/sample-data";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
+import { X, HelpCircle, FileText } from "lucide-react";
 import { useERPCommands } from "@/lib/erp-context";
 
 export const Route = createFileRoute("/customers")({
@@ -13,6 +14,20 @@ function Customers() {
   const [customerList, setCustomerList] = useState(CUSTOMERS.map((c) => ({ ...c })));
   const [selectedCode, setSelectedCode] = useState<string | null>(CUSTOMERS[0]?.code || null);
   const [mode, setMode] = useState<"View" | "New" | "Edit">("View");
+  const [activeModal, setActiveModal] = useState<"HELP" | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setActiveModal(null);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   // Selection data state
   const selectedCustomer = customerList.find((c) => c.code === selectedCode) || customerList[0];
@@ -109,21 +124,34 @@ function Customers() {
   return (
     <DesktopLayout
       fnKeys={[
-        { key: "F1", label: "Help" },
+        { key: "F1", label: "Help", onClick: () => setActiveModal("HELP") },
         { key: "F2", label: "New (F2)", onClick: () => { setMode("New"); setFormName(""); setFormMobile(""); setFormOpening(0); } },
         { key: "F3", label: "Edit (F3)", onClick: () => selectedCode && setMode("Edit") },
         { key: "F4", label: "Delete (F4)", tone: "danger", onClick: handleDelete },
         { key: "F5", label: "Save (F5)", tone: "primary", onClick: handleSave },
         { key: "F6", label: "Cancel", onClick: () => setMode("View") },
-        { key: "F7", label: "Print Ledger", onClick: () => window.print() }
+        { key: "F7", label: "Print Ledger", onClick: () => window.print() },
+        { key: "F8", label: "Find (F8)", onClick: () => searchInputRef.current?.focus() }
       ]}
     >
       <div className="grid grid-cols-2 gap-3">
         <Panel title="Search / Select Customer">
           <div className="mb-2 flex gap-2">
             <select className="erp-input w-36"><option>Customer Name</option></select>
-            <input className="erp-input flex-1" placeholder="Search Text"/>
-            <button className="rounded-sm bg-primary px-3 text-primary-foreground text-[12.5px]">Search (F3)</button>
+            <input
+              ref={searchInputRef}
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="erp-input flex-1"
+              placeholder="Search by customer name... (F8)"
+            />
+            <button
+              onClick={() => searchInputRef.current?.focus()}
+              className="rounded-sm bg-primary px-3 text-primary-foreground text-[12.5px]"
+            >
+              Search (F8)
+            </button>
           </div>
           <table className="erp-grid">
             <thead>
@@ -139,7 +167,14 @@ function Customers() {
               </tr>
             </thead>
             <tbody>
-              {customerList.map((c, i) => (
+              {customerList
+                .filter(
+                  (c) =>
+                    c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    c.mobile.includes(searchQuery) ||
+                    c.city.toLowerCase().includes(searchQuery.toLowerCase())
+                )
+                .map((c, i) => (
                 <tr
                   key={c.code}
                   onClick={() => handleSelectCustomer(c.code)}
@@ -236,6 +271,44 @@ function Customers() {
           </div>
         </Panel>
       </div>
+
+      {activeModal === "HELP" && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs text-[12.5px]">
+          <div className="w-[500px] rounded-md border border-border bg-white shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex h-8 items-center justify-between bg-titlebar px-3 text-titlebar-foreground font-semibold">
+              <div className="flex items-center gap-2">
+                <HelpCircle className="h-4 w-4" />
+                <span>Customer Registry Manual [F1]</span>
+              </div>
+              <button onClick={() => setActiveModal(null)} className="grid h-6 w-8 place-items-center hover:bg-destructive text-white">✕</button>
+            </div>
+            <div className="p-4 space-y-3 bg-slate-50">
+              <h4 className="font-bold text-primary border-b pb-1">Hotkeys &amp; Commands Reference</h4>
+              <table className="erp-grid w-full bg-white">
+                <thead>
+                  <tr>
+                    <th className="erp-grid-th">Key</th>
+                    <th className="erp-grid-th">Action Description</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td className="erp-grid-td font-bold font-mono">F1</td><td className="erp-grid-td">Show this Help screen manual</td></tr>
+                  <tr><td className="erp-grid-td font-bold font-mono">F2</td><td className="erp-grid-td">Create a New Customer account file</td></tr>
+                  <tr><td className="erp-grid-td font-bold font-mono">F3</td><td className="erp-grid-td">Edit details for selected Customer</td></tr>
+                  <tr><td className="erp-grid-td font-bold font-mono">F4</td><td className="erp-grid-td font-bold text-destructive">Delete selected Customer profile</td></tr>
+                  <tr><td className="erp-grid-td font-bold font-mono">F5</td><td className="erp-grid-td">Save new Customer file or updates</td></tr>
+                  <tr><td className="erp-grid-td font-bold font-mono">F6</td><td className="erp-grid-td">Cancel active form edits</td></tr>
+                  <tr><td className="erp-grid-td font-bold font-mono">F7</td><td className="erp-grid-td">Print outstanding balances ledger report</td></tr>
+                  <tr><td className="erp-grid-td font-bold font-mono">F8</td><td className="erp-grid-td font-bold text-primary">Focus query input box to filter list</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div className="flex h-10 items-center justify-end border-t border-border bg-slate-100 px-3">
+              <button onClick={() => setActiveModal(null)} className="rounded-sm border border-border bg-white px-4 py-1 hover:bg-slate-200 transition-colors">Close [ESC]</button>
+            </div>
+          </div>
+        </div>
+      )}
     </DesktopLayout>
   );
 }

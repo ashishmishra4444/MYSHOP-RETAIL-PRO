@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { DesktopLayout, Panel } from "@/components/desktop/DesktopLayout";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { CAMPAIGN_LOGS, runSchedulerTrigger, CampaignLog } from "@/lib/marketing-store";
-import { PlayCircle, MessageSquare, ShieldCheck, RefreshCw } from "lucide-react";
+import { PlayCircle, MessageSquare, ShieldCheck, RefreshCw, HelpCircle } from "lucide-react";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/notifications")({
   head: () => ({ meta: [{ title: "Notification Center — MyShop Retail Pro" }] }),
@@ -12,28 +13,46 @@ export const Route = createFileRoute("/notifications")({
 function NotificationCenter() {
   const [logs, setLogs] = useState<CampaignLog[]>(() => [...CAMPAIGN_LOGS]);
   const [isRunning, setIsRunning] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
+
+  // Close help on Escape
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setShowHelp(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   // Trigger daily scheduler run simulator
   const handleTriggerScheduler = () => {
     setIsRunning(true);
+    toast.info("Triggering background scheduler execution...");
     setTimeout(() => {
       const addedLogs = runSchedulerTrigger();
       setLogs([...addedLogs, ...CAMPAIGN_LOGS]);
       setIsRunning(false);
       if (addedLogs.length > 0) {
-        alert(`Scheduler execution complete! Created ${addedLogs.length} new log entries for scheduled campaigns.`);
+        toast.success(`Scheduler run complete! Dispatched ${addedLogs.length} new campaign log entries.`);
       } else {
-        alert("Scheduler ran: No scheduled campaigns starting today, or duplicate sends prevented.");
+        toast.info("Scheduler ran: No scheduled campaigns starting today, or duplicate sends prevented.");
       }
     }, 1000);
+  };
+
+  const handleRefresh = () => {
+    setLogs([...CAMPAIGN_LOGS]);
+    toast.success("Broadcast logs synchronized successfully!");
   };
 
   return (
     <DesktopLayout
       fnKeys={[
-        { key: "F1", label: "Help" },
+        { key: "F1", label: "Help", onClick: () => { setShowHelp(true); toast.info("Opening Notification Manual..."); } },
         { key: "F2", label: "Run Scheduler", onClick: handleTriggerScheduler },
-        { key: "F5", label: "Refresh", tone: "primary", onClick: () => setLogs([...CAMPAIGN_LOGS]) }
+        { key: "F5", label: "Refresh", tone: "primary", onClick: handleRefresh }
       ]}
     >
       <Panel
@@ -42,7 +61,7 @@ function NotificationCenter() {
           <button
             onClick={handleTriggerScheduler}
             disabled={isRunning}
-            className="flex items-center gap-1.5 px-3 py-1 text-xs font-semibold bg-white text-primary rounded-sm border border-primary hover:bg-slate-50 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1 text-xs font-semibold bg-white text-primary rounded-sm border border-primary hover:bg-slate-50 transition-colors cursor-pointer"
           >
             {isRunning ? (
               <RefreshCw className="h-3.5 w-3.5 animate-spin" />
@@ -107,6 +126,39 @@ function NotificationCenter() {
           </table>
         </div>
       </Panel>
+
+      {/* HELP MODAL */}
+      {showHelp && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs text-[12.5px]">
+          <div className="w-[450px] rounded-md border border-border bg-white shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex h-8 items-center justify-between bg-titlebar px-3 text-titlebar-foreground font-semibold">
+              <div className="flex items-center gap-2">
+                <HelpCircle className="h-4 w-4" />
+                <span>Broadcast Logs Manual [F1]</span>
+              </div>
+              <button onClick={() => setShowHelp(false)} className="grid h-6 w-8 place-items-center hover:bg-destructive text-white">✕</button>
+            </div>
+            <div className="p-4 space-y-3 bg-slate-50">
+              <table className="erp-grid w-full bg-white">
+                <thead>
+                  <tr>
+                    <th className="erp-grid-th">Key</th>
+                    <th className="erp-grid-th">Action Description</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td className="erp-grid-td font-bold font-mono">F1</td><td className="erp-grid-td">View this manual guide</td></tr>
+                  <tr><td className="erp-grid-td font-bold font-mono">F2</td><td className="erp-grid-td">Simulate / Execute Daily Scheduler Run</td></tr>
+                  <tr><td className="erp-grid-td font-bold font-mono">F5</td><td className="erp-grid-td">Sync and reload campaign dispatch logs</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div className="flex h-10 items-center justify-end border-t border-border bg-slate-100 px-3">
+              <button onClick={() => setShowHelp(false)} className="rounded-sm border border-border bg-white px-4 py-1 hover:bg-slate-200 transition-colors">Close [ESC]</button>
+            </div>
+          </div>
+        </div>
+      )}
     </DesktopLayout>
   );
 }

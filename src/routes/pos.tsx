@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { DesktopLayout } from "@/components/desktop/DesktopLayout";
 import { CART_INITIAL, fmt } from "@/lib/sample-data";
 import { Search, Settings, Trash2, X } from "lucide-react";
@@ -10,8 +10,26 @@ export const Route = createFileRoute("/pos")({
   component: POS,
 });
 
+import { PRODUCTS, CUSTOMERS } from "@/lib/sample-data";
+
 function POS() {
   const [recallOpen, setRecallOpen] = useState(false);
+  const [activePOSModal, setActivePOSModal] = useState<"PAYMENT" | "STOCK_CHECK" | "CUSTOMER_PICK" | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<"CASH" | "CARD" | "UPI" | "MULTI">("CASH");
+  const [amountTendered, setAmountTendered] = useState<string>("");
+  const [stockSearch, setStockSearch] = useState<string>("");
+  const [customerSearch, setCustomerSearch] = useState<string>("");
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setRecallOpen(false);
+        setActivePOSModal(null);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   // Register POS page with the ERP Toolbar Command framework
   const { context } = useERPCommands({
@@ -21,7 +39,9 @@ function POS() {
       if (cmd === "NEW") {
         context.createPOSSession();
       } else if (cmd === "SAVE") {
-        handleSave();
+        setPaymentMethod("CASH");
+        setAmountTendered("");
+        setActivePOSModal("PAYMENT");
       } else if (cmd === "PRINT") {
         handlePrint();
       } else if (cmd === "HOLD") {
@@ -70,20 +90,21 @@ function POS() {
     setCart(CART_INITIAL.map((c) => ({ ...c })));
   };
 
+
   return (
     <DesktopLayout
       fnKeys={[
-        { key: "F1", label: "Cash (Save)", tone: "primary", onClick: handleSave },
-        { key: "F2", label: "Card", onClick: handleSave },
-        { key: "F3", label: "UPI", onClick: handleSave },
-        { key: "F4", label: "Multi Pay", onClick: handleSave },
+        { key: "F1", label: "Cash (Save)", tone: "primary", onClick: () => { setPaymentMethod("CASH"); setAmountTendered(""); setActivePOSModal("PAYMENT"); } },
+        { key: "F2", label: "Card", onClick: () => { setPaymentMethod("CARD"); setActivePOSModal("PAYMENT"); } },
+        { key: "F3", label: "UPI", onClick: () => { setPaymentMethod("UPI"); setActivePOSModal("PAYMENT"); } },
+        { key: "F4", label: "Multi Pay", onClick: () => { setPaymentMethod("MULTI"); setActivePOSModal("PAYMENT"); } },
         { key: "F5", label: "Demo Items", onClick: initializeDemoItems },
         { key: "F6", label: "Save (F6)", onClick: handleSave },
         { key: "F7", label: "Bill Print", onClick: handlePrint },
         { key: "F8", label: "Hold Bill", onClick: () => context.activeSessionId && context.holdPOSSession(context.activeSessionId) },
         { key: "F9", label: "Recall Bill", onClick: () => setRecallOpen(true) },
-        { key: "F10", label: "Stock Check", onClick: () => context.dispatchCommand("STOCK") },
-        { key: "F11", label: "Customers", onClick: () => context.dispatchCommand("USER") },
+        { key: "F10", label: "Stock Check", onClick: () => { setStockSearch(""); setActivePOSModal("STOCK_CHECK"); } },
+        { key: "F11", label: "Customers", onClick: () => { setCustomerSearch(""); setActivePOSModal("CUSTOMER_PICK"); } },
         { key: "F12", label: "Cancel", tone: "danger", onClick: () => setCart([]) }
       ]}
     >
@@ -220,51 +241,205 @@ function POS() {
         </div>
       </div>
 
-      {/* Held Bills Recall Dialog Overlay */}
-      {recallOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs">
-          <div className="w-[500px] rounded-md border border-border bg-white shadow-2xl overflow-hidden">
-            <div className="flex h-8 items-center justify-between bg-titlebar px-3 text-[12.5px] text-titlebar-foreground">
-              <span className="font-semibold">Recall Held Bill Session</span>
-              <button onClick={() => setRecallOpen(false)} className="grid h-6 w-8 place-items-center hover:bg-destructive"><X className="h-4 w-4"/></button>
+
+      {/* Interactive Payment / Tender Dialog Modal */}
+      {activePOSModal === "PAYMENT" && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs text-[12.5px]">
+          <div className="w-[500px] rounded-md border border-border bg-white shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex h-8 items-center justify-between bg-titlebar px-3 text-titlebar-foreground font-semibold">
+              <span>Finalize Bill &amp; Process Payment [{paymentMethod}]</span>
+              <button onClick={() => setActivePOSModal(null)} className="grid h-6 w-8 place-items-center hover:bg-destructive text-white">✕</button>
             </div>
-            <div className="p-3">
+            <div className="p-4 space-y-4">
+              <div className="flex justify-between items-center bg-slate-100 p-3 rounded-sm border">
+                <span className="font-semibold text-muted-foreground text-sm">TOTAL AMOUNT DUE</span>
+                <span className="text-2xl font-bold text-destructive">₹ {fmt(totals.total)}</span>
+              </div>
+
+              {paymentMethod === "CASH" && (
+                <div className="space-y-3">
+                  <label className="block">
+                    <span className="font-semibold text-primary block mb-1">Enter Cash Tendered (₹)</span>
+                    <input
+                      type="number"
+                      autoFocus
+                      value={amountTendered}
+                      onChange={(e) => setAmountTendered(e.target.value)}
+                      placeholder="e.g. 500, 1000"
+                      className="erp-input w-full h-10 text-lg font-mono font-bold"
+                    />
+                  </label>
+                  {Number(amountTendered) > 0 && (
+                    <div className="flex justify-between items-center bg-amber-50 p-2.5 rounded-sm border border-amber-200">
+                      <span className="font-semibold text-amber-800">CHANGE TO RETURN</span>
+                      <span className="text-xl font-bold text-success font-mono">
+                        ₹ {fmt(Math.max(0, Number(amountTendered) - totals.total))}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {paymentMethod === "CARD" && (
+                <div className="p-4 border border-dashed rounded-sm bg-slate-50 flex flex-col items-center gap-2">
+                  <span className="font-semibold text-primary">Card Reader Transaction</span>
+                  <p className="text-muted-foreground text-xs text-center">Swipe or tap customer card on the physical terminal now...</p>
+                  <div className="h-2 w-24 bg-slate-200 overflow-hidden rounded-full relative mt-2">
+                    <div className="absolute inset-y-0 bg-primary w-8 animate-infinite animate-duration-1000" style={{ animationName: 'slide' }} />
+                  </div>
+                </div>
+              )}
+
+              {paymentMethod === "UPI" && (
+                <div className="p-4 border rounded-sm bg-slate-50 flex flex-col items-center gap-3">
+                  <span className="font-semibold text-primary">UPI QR Code Payment</span>
+                  <div className="h-32 w-32 bg-white border flex items-center justify-center font-bold text-muted-foreground select-none relative">
+                    <div className="absolute inset-2 border-2 border-primary opacity-60 rounded-xs" />
+                    [QR CODE]
+                  </div>
+                  <p className="text-muted-foreground text-[11px] text-center">Scan QR code using GooglePay, PhonePe, Paytm, or BHIM UPI.</p>
+                </div>
+              )}
+
+              {paymentMethod === "MULTI" && (
+                <div className="space-y-3 p-3 border rounded-sm bg-slate-50">
+                  <span className="font-semibold text-primary block border-b pb-1">Split Payment Modes</span>
+                  <div className="grid grid-cols-3 gap-2">
+                    <label className="block text-xs">Cash Amt<input type="number" className="erp-input w-full mt-1" placeholder="Cash"/></label>
+                    <label className="block text-xs">Card Amt<input type="number" className="erp-input w-full mt-1" placeholder="Card"/></label>
+                    <label className="block text-xs">UPI Amt<input type="number" className="erp-input w-full mt-1" placeholder="UPI"/></label>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button onClick={() => setActivePOSModal(null)} className="rounded-sm border border-border bg-white px-4 py-2 hover:bg-slate-100 transition-colors">Cancel [ESC]</button>
+                <button
+                  onClick={() => {
+                    alert(`Payment processed successfully for POS Bill ${activeSession.id}!`);
+                    setCart([]);
+                    setActivePOSModal(null);
+                  }}
+                  disabled={totals.total === 0 || (paymentMethod === "CASH" && Number(amountTendered) < totals.total)}
+                  className="rounded-sm bg-primary text-primary-foreground px-5 py-2 font-semibold hover:bg-primary/95 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  Confirm Payment &amp; Save (F6)
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Stock Lookup Checker Dialog Modal */}
+      {activePOSModal === "STOCK_CHECK" && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs text-[12.5px]">
+          <div className="w-[600px] max-h-[80vh] flex flex-col rounded-md border border-border bg-white shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex h-8 items-center justify-between bg-titlebar px-3 text-titlebar-foreground font-semibold">
+              <span>Quick Product Stock Checker</span>
+              <button onClick={() => setActivePOSModal(null)} className="grid h-6 w-8 place-items-center hover:bg-destructive text-white">✕</button>
+            </div>
+            <div className="p-3 bg-slate-100 border-b border-border flex items-center gap-2">
+              <input
+                type="text"
+                autoFocus
+                value={stockSearch}
+                onChange={(e) => setStockSearch(e.target.value)}
+                placeholder="Search by SKU Code or Name..."
+                className="erp-input flex-1"
+              />
+            </div>
+            <div className="flex-1 overflow-auto p-3">
               <table className="erp-grid w-full">
                 <thead>
                   <tr>
-                    <th className="erp-grid-th">Hold ID</th>
-                    <th className="erp-grid-th">Items Count</th>
-                    <th className="erp-grid-th">Held Time</th>
-                    <th className="erp-grid-th w-20 text-center">Action</th>
+                    <th className="erp-grid-th">SKU</th>
+                    <th className="erp-grid-th">Product Name</th>
+                    <th className="erp-grid-th text-right">MRP</th>
+                    <th className="erp-grid-th text-right">Stock</th>
+                    <th className="erp-grid-th text-center">Action</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {context.heldBills.map((b) => (
-                    <tr key={b.id}>
-                      <td className="erp-grid-td font-semibold">{b.id}</td>
-                      <td className="erp-grid-td">{b.cart.length} items</td>
-                      <td className="erp-grid-td">{b.heldAt}</td>
+                  {PRODUCTS.filter(p => p.name.toLowerCase().includes(stockSearch.toLowerCase()) || p.code.toLowerCase().includes(stockSearch.toLowerCase())).map((p) => (
+                    <tr key={p.code}>
+                      <td className="erp-grid-td font-mono">{p.code}</td>
+                      <td className="erp-grid-td font-semibold">{p.name}</td>
+                      <td className="erp-grid-td text-right">{fmt(p.mrp)}</td>
+                      <td className={`erp-grid-td text-right font-bold ${p.stock <= p.reorder ? "text-amber-600" : "text-success"}`}>{p.stock}</td>
                       <td className="erp-grid-td text-center">
                         <button
-                          type="button"
                           onClick={() => {
-                            context.recallPOSSession(b.id);
-                            setRecallOpen(false);
+                            // Add item to cart
+                            const existing = cart.find(x => x.code === p.code);
+                            if (existing) {
+                              setCart(cart.map(x => x.code === p.code ? { ...x, qty: x.qty + 1 } : x));
+                            } else {
+                              setCart([...cart, { ...p, qty: 1, disc: 0 }]);
+                            }
+                            setActivePOSModal(null);
                           }}
-                          className="px-2.5 py-1 text-xs bg-primary text-primary-foreground rounded-sm"
+                          className="px-2 py-0.5 bg-primary text-primary-foreground text-[11px] rounded-sm font-semibold"
                         >
-                          Recall
+                          + Add
                         </button>
                       </td>
                     </tr>
                   ))}
-                  {context.heldBills.length === 0 && (
-                    <tr>
-                      <td colSpan={4} className="text-center py-6 text-muted-foreground text-xs">
-                        No bills on hold currently.
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Customer Pick Selector Dialog Modal */}
+      {activePOSModal === "CUSTOMER_PICK" && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs text-[12.5px]">
+          <div className="w-[600px] max-h-[80vh] flex flex-col rounded-md border border-border bg-white shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex h-8 items-center justify-between bg-titlebar px-3 text-titlebar-foreground font-semibold">
+              <span>Customer Registry Selector</span>
+              <button onClick={() => setActivePOSModal(null)} className="grid h-6 w-8 place-items-center hover:bg-destructive text-white">✕</button>
+            </div>
+            <div className="p-3 bg-slate-100 border-b border-border">
+              <input
+                type="text"
+                autoFocus
+                value={customerSearch}
+                onChange={(e) => setCustomerSearch(e.target.value)}
+                placeholder="Search by customer name..."
+                className="erp-input w-full"
+              />
+            </div>
+            <div className="flex-1 overflow-auto p-3">
+              <table className="erp-grid w-full">
+                <thead>
+                  <tr>
+                    <th className="erp-grid-th">Name</th>
+                    <th className="erp-grid-th">Mobile</th>
+                    <th className="erp-grid-th text-right">O/S Debt</th>
+                    <th className="erp-grid-th text-center">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {CUSTOMERS.filter(c => c.name.toLowerCase().includes(customerSearch.toLowerCase())).map((c) => (
+                    <tr key={c.code}>
+                      <td className="erp-grid-td font-semibold">{c.name}</td>
+                      <td className="erp-grid-td font-mono">{c.mobile}</td>
+                      <td className="erp-grid-td text-right font-mono font-bold text-destructive">{fmt(c.opening)}</td>
+                      <td className="erp-grid-td text-center">
+                        <button
+                          onClick={() => {
+                            context.updatePOSSessionCustomer(activeSession.id, c.name);
+                            setActivePOSModal(null);
+                          }}
+                          className="px-2.5 py-1 bg-primary text-primary-foreground text-[11px] rounded-sm font-semibold"
+                        >
+                          Select
+                        </button>
                       </td>
                     </tr>
-                  )}
+                  ))}
                 </tbody>
               </table>
             </div>

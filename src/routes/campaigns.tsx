@@ -1,9 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { DesktopLayout, Panel, Field, Input, Select } from "@/components/desktop/DesktopLayout";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { CAMPAIGNS, Campaign, getCustomersBySegment } from "@/lib/marketing-store";
 import { useERPCommands } from "@/lib/erp-context";
-import { Megaphone, Users, Calendar, Award } from "lucide-react";
+import { Megaphone, Users, Calendar, Award, HelpCircle } from "lucide-react";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/campaigns")({
   head: () => ({ meta: [{ title: "Campaign Manager — MyShop Retail Pro" }] }),
@@ -14,6 +15,18 @@ function CampaignManager() {
   const [campaigns, setCampaigns] = useState<Campaign[]>(CAMPAIGNS.map(c => ({ ...c })));
   const [selectedId, setSelectedId] = useState<string | null>(CAMPAIGNS[0]?.id || null);
   const [mode, setMode] = useState<"View" | "New" | "Edit">("View");
+  const [showHelp, setShowHelp] = useState(false);
+
+  // Close help on Escape
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setShowHelp(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   // Selection states
   const activeCampaign = campaigns.find(c => c.id === selectedId) || campaigns[0];
@@ -56,7 +69,7 @@ function CampaignManager() {
       };
       setCampaigns([...campaigns, newCamp]);
       setSelectedId(nextId);
-      alert("Campaign saved successfully!");
+      toast.success("Campaign saved successfully!");
     } else if (mode === "Edit" && selectedId) {
       setCampaigns(campaigns.map(c => c.id === selectedId ? {
         ...c,
@@ -67,7 +80,7 @@ function CampaignManager() {
         targetAudience,
         deliveryChannels: channels
       } : c));
-      alert("Campaign details updated!");
+      toast.success("Campaign details updated!");
     }
     setMode("View");
   };
@@ -87,7 +100,7 @@ function CampaignManager() {
         setChannels(filtered[0].deliveryChannels);
       }
       setMode("View");
-      alert("Campaign removed.");
+      toast.success("Campaign removed.");
     }
   };
 
@@ -113,7 +126,7 @@ function CampaignManager() {
       } else if (cmd === "SAVE") {
         handleSave();
       } else if (cmd === "PRINT") {
-        alert("Printing Campaign performance report details...");
+        toast.info("Printing Campaign performance report details...");
         window.print();
       }
     }
@@ -130,13 +143,13 @@ function CampaignManager() {
   return (
     <DesktopLayout
       fnKeys={[
-        { key: "F1", label: "Help" },
-        { key: "F2", label: "New (F2)", onClick: () => { setMode("New"); setName(""); setOfferTitle(""); setMessage(""); } },
-        { key: "F3", label: "Edit (F3)", onClick: () => selectedId && setMode("Edit") },
+        { key: "F1", label: "Help", onClick: () => { setShowHelp(true); toast.info("Opening Campaign Manager Manual..."); } },
+        { key: "F2", label: "New (F2)", onClick: () => { setMode("New"); setName(""); setOfferTitle(""); setMessage(""); toast.info("Creating new campaign. Fill out form and press F5 to save."); } },
+        { key: "F3", label: "Edit (F3)", onClick: () => { if (selectedId) { setMode("Edit"); toast.info(`Editing campaign ${selectedId}. Press F5 to save changes.`); } else { toast.warning("Please select a campaign first."); } } },
         { key: "F4", label: "Delete (F4)", tone: "danger", onClick: handleDelete },
         { key: "F5", label: "Save (F5)", tone: "primary", onClick: handleSave },
-        { key: "F6", label: "Cancel", onClick: () => setMode("View") },
-        { key: "F7", label: "Print Report", onClick: () => window.print() }
+        { key: "F6", label: "Cancel", onClick: () => { setMode("View"); toast.info("Cancelled changes."); } },
+        { key: "F7", label: "Print Report", onClick: () => { toast.info("Dispatching print job..."); window.print(); } }
       ]}
     >
       <div className="grid grid-cols-[1fr_480px] gap-3">
@@ -288,6 +301,43 @@ function CampaignManager() {
           </div>
         </Panel>
       </div>
+
+      {/* HELP MODAL */}
+      {showHelp && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs text-[12.5px]">
+          <div className="w-[450px] rounded-md border border-border bg-white shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex h-8 items-center justify-between bg-titlebar px-3 text-titlebar-foreground font-semibold">
+              <div className="flex items-center gap-2">
+                <HelpCircle className="h-4 w-4" />
+                <span>Campaign Manager Manual [F1]</span>
+              </div>
+              <button onClick={() => setShowHelp(false)} className="grid h-6 w-8 place-items-center hover:bg-destructive text-white">✕</button>
+            </div>
+            <div className="p-4 space-y-3 bg-slate-50">
+              <table className="erp-grid w-full bg-white">
+                <thead>
+                  <tr>
+                    <th className="erp-grid-th">Key</th>
+                    <th className="erp-grid-th">Action Description</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td className="erp-grid-td font-bold font-mono">F1</td><td className="erp-grid-td">View this manual guide</td></tr>
+                  <tr><td className="erp-grid-td font-bold font-mono">F2</td><td className="erp-grid-td">Create new campaign entry</td></tr>
+                  <tr><td className="erp-grid-td font-bold font-mono">F3</td><td className="erp-grid-td">Edit selected campaign details</td></tr>
+                  <tr><td className="erp-grid-td font-bold font-mono">F4</td><td className="erp-grid-td text-destructive font-semibold">Delete selected campaign from list</td></tr>
+                  <tr><td className="erp-grid-td font-bold font-mono">F5</td><td className="erp-grid-td text-primary font-semibold">Save new/edited campaign changes</td></tr>
+                  <tr><td className="erp-grid-td font-bold font-mono">F6</td><td className="erp-grid-td">Cancel edit/new mode (discard changes)</td></tr>
+                  <tr><td className="erp-grid-td font-bold font-mono">F7</td><td className="erp-grid-td">Print currently listed campaign details</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div className="flex h-10 items-center justify-end border-t border-border bg-slate-100 px-3">
+              <button onClick={() => setShowHelp(false)} className="rounded-sm border border-border bg-white px-4 py-1 hover:bg-slate-200 transition-colors">Close [ESC]</button>
+            </div>
+          </div>
+        </div>
+      )}
     </DesktopLayout>
   );
 }

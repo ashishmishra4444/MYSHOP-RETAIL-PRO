@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { DesktopLayout, Panel, Field, Input, Select } from "@/components/desktop/DesktopLayout";
 import { PRODUCTS, fmt } from "@/lib/sample-data";
-import { useState } from "react";
-import { Image as ImageIcon } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { Image as ImageIcon, X, HelpCircle, FileText } from "lucide-react";
 import { useERPCommands } from "@/lib/erp-context";
 
 export const Route = createFileRoute("/products")({
@@ -15,6 +15,21 @@ function ProductMaster() {
   const [selectedCode, setSelectedCode] = useState<string | null>(PRODUCTS[0]?.code || null);
   const [mode, setMode] = useState<"View" | "New" | "Edit">("View");
   const [tab, setTab] = useState("General");
+  const [activeModal, setActiveModal] = useState<"HELP" | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setActiveModal(null);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
   
   // Fields for forms (local edit state)
   const selectedProduct = productList.find((p) => p.code === selectedCode) || productList[0];
@@ -83,7 +98,7 @@ function ProductMaster() {
   };
 
   // Register Products Page with commands Context
-  useERPCommands({
+  const { context } = useERPCommands({
     pageName: "products",
     availableCommands: ["NEW", "EDIT", "DELETE", "SAVE", "PRINT"],
     selectedRecordId: selectedCode,
@@ -114,18 +129,28 @@ function ProductMaster() {
   return (
     <DesktopLayout
       fnKeys={[
-        { key: "F1", label: "Help" },
+        { key: "F1", label: "Help", onClick: () => setActiveModal("HELP") },
         { key: "F2", label: "New (F2)", onClick: () => { setMode("New"); setFormName(""); setFormRate(0); setFormMrp(0); } },
         { key: "F3", label: "Edit (F3)", onClick: () => selectedCode && setMode("Edit") },
         { key: "F4", label: "Delete (F4)", tone: "danger", onClick: handleDelete },
         { key: "F5", label: "Save (F5)", tone: "primary", onClick: handleSave },
         { key: "F6", label: "Cancel", onClick: () => setMode("View") },
-        { key: "F7", label: "Find" },
-        { key: "F8", label: "Barcode", onClick: () => alert("Close layout and click Barcode on top toolbar.") }
+        { key: "F7", label: "Find (F7)", onClick: () => searchInputRef.current?.focus() },
+        { key: "F8", label: "Barcode (F8)", onClick: () => context.setBarcodeModalOpen(true) }
       ]}
     >
       <div className="grid grid-cols-[1fr_460px] gap-3">
         <Panel title="Product List">
+          <div className="p-2 border-b border-border bg-slate-50">
+            <input
+              ref={searchInputRef}
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search products by Code, Barcode, or Name... (F7)"
+              className="erp-input w-full"
+            />
+          </div>
           <table className="erp-grid">
             <thead>
               <tr>
@@ -140,8 +165,15 @@ function ProductMaster() {
               </tr>
             </thead>
             <tbody>
-              {productList.map((it, i) => (
-                <tr
+              {productList
+                .filter(
+                  (it) =>
+                    it.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    it.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    it.barcode.includes(searchQuery)
+                )
+                .map((it, i) => (
+                  <tr
                   key={it.code}
                   onClick={() => handleSelectProduct(it.code)}
                   className={`cursor-pointer transition-colors ${
@@ -252,6 +284,44 @@ function ProductMaster() {
           </div>
         </Panel>
       </div>
+
+      {activeModal === "HELP" && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs text-[12.5px]">
+          <div className="w-[500px] rounded-md border border-border bg-white shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex h-8 items-center justify-between bg-titlebar px-3 text-titlebar-foreground font-semibold">
+              <div className="flex items-center gap-2">
+                <HelpCircle className="h-4 w-4" />
+                <span>Product Master Manual [F1]</span>
+              </div>
+              <button onClick={() => setActiveModal(null)} className="grid h-6 w-8 place-items-center hover:bg-destructive text-white">✕</button>
+            </div>
+            <div className="p-4 space-y-3 bg-slate-50">
+              <h4 className="font-bold text-primary border-b pb-1">Hotkeys &amp; Commands Reference</h4>
+              <table className="erp-grid w-full bg-white">
+                <thead>
+                  <tr>
+                    <th className="erp-grid-th">Key</th>
+                    <th className="erp-grid-th">Action Description</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td className="erp-grid-td font-bold font-mono">F1</td><td className="erp-grid-td">Show this Help screen manual</td></tr>
+                  <tr><td className="erp-grid-td font-bold font-mono">F2</td><td className="erp-grid-td">Add a New product item to catalog</td></tr>
+                  <tr><td className="erp-grid-td font-bold font-mono">F3</td><td className="erp-grid-td">Edit selected product properties</td></tr>
+                  <tr><td className="erp-grid-td font-bold font-mono">F4</td><td className="erp-grid-td font-bold text-destructive">Delete selected product from master</td></tr>
+                  <tr><td className="erp-grid-td font-bold font-mono">F5</td><td className="erp-grid-td">Save new SKU details or modifications</td></tr>
+                  <tr><td className="erp-grid-td font-bold font-mono">F6</td><td className="erp-grid-td">Cancel active input field additions</td></tr>
+                  <tr><td className="erp-grid-td font-bold font-mono">F7</td><td className="erp-grid-td font-bold text-primary">Focus search box to filter products</td></tr>
+                  <tr><td className="erp-grid-td font-bold font-mono">F8</td><td className="erp-grid-td">Generate barcode stickers for item</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div className="flex h-10 items-center justify-end border-t border-border bg-slate-100 px-3">
+              <button onClick={() => setActiveModal(null)} className="rounded-sm border border-border bg-white px-4 py-1 hover:bg-slate-200 transition-colors">Close [ESC]</button>
+            </div>
+          </div>
+        </div>
+      )}
     </DesktopLayout>
   );
 }
