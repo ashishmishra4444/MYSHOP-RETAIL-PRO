@@ -6,6 +6,8 @@ import {
   useRouter,
   HeadContent,
   Scripts,
+  useRouterState,
+  useNavigate,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 
@@ -116,6 +118,21 @@ import { Toaster } from "sonner";
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const routerState = useRouterState();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const isAuthenticated = localStorage.getItem("myshop_session_active") === "true";
+      const isLoginPage = routerState.location.pathname === "/login";
+
+      if (!isAuthenticated && !isLoginPage) {
+        navigate({ to: "/login", replace: true });
+      } else if (isAuthenticated && isLoginPage) {
+        navigate({ to: "/", replace: true });
+      }
+    }
+  }, [routerState.location.pathname, navigate]);
 
   return (
     <QueryClientProvider client={queryClient}>

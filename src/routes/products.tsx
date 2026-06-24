@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useRouterState } from "@tanstack/react-router";
 import { DesktopLayout, Panel, Field, Input, Select } from "@/components/desktop/DesktopLayout";
 import { PRODUCTS, fmt } from "@/lib/sample-data";
 import { useState, useRef, useEffect } from "react";
@@ -17,6 +17,7 @@ const BRANDS = ["Annapurna", "Royal", "Sundrop", "Tata", "Maggi", "Parle", "Madh
 const UNITS = ["PCS", "BOX", "KG", "LITER", "PACK", "BOTTLE", "GRAM", "DOZEN", "METER", "CAN", "BAG", "BOXES"];
 
 function ProductMaster() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [productList, setProductList] = useState(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("myshop_products");
@@ -30,6 +31,24 @@ function ProductMaster() {
     }
     return PRODUCTS.map((p) => ({ ...p }));
   });
+
+  // Sync state from localStorage when route is loaded/changed
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("myshop_products");
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (JSON.stringify(parsed) !== JSON.stringify(productList)) {
+            setProductList(parsed);
+          }
+        } catch (e) {
+          console.error("Failed to sync products from localStorage", e);
+        }
+      }
+    }
+  }, [pathname]);
+
   const [selectedCode, setSelectedCode] = useState<string | null>(() => productList[0]?.code || null);
   const [mode, setMode] = useState<"View" | "New" | "Edit">("View");
   const [tab, setTab] = useState("General");

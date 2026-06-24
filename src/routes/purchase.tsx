@@ -1,4 +1,4 @@
-import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { createFileRoute, useRouter, useRouterState } from "@tanstack/react-router";
 import { DesktopLayout, Panel, Field, Input, Select } from "@/components/desktop/DesktopLayout";
 import { PRODUCTS, SUPPLIERS, fmt } from "@/lib/sample-data";
 import { Plus, Trash2, HelpCircle, FileText, Printer, Barcode, ArrowLeft, ArrowRight, RotateCcw, Pause, CreditCard, X } from "lucide-react";
@@ -47,6 +47,7 @@ const MOCK_PAST_INVOICES = [
 
 function Purchase() {
   const router = useRouter();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   // Master Form States
   const [supplier, setSupplier] = useState(SUPPLIERS[0]?.name || "");
@@ -62,14 +63,32 @@ function Purchase() {
   const [vehicleNo, setVehicleNo] = useState("MH12 AB 1234");
   const [narration, setNarration] = useState("Purchase of Grocery Items");
 
-  // Items Cart State
-  const [cartItems, setCartItems] = useState<PurchaseItem[]>([
-    { code: "P1001", name: "Whole Wheat Atta 5KG", hsn: "110100", qty: 25, rate: 245, disc: 0, gst: 5 },
-    { code: "P1002", name: "Basmati Rice 1KG", hsn: "100630", qty: 20, rate: 115, disc: 0, gst: 5 },
-    { code: "P1003", name: "Sunflower Oil 1L", hsn: "151211", qty: 10, rate: 155, disc: 0, gst: 18 },
-    { code: "P1004", name: "Iodised Salt 1KG", hsn: "250100", qty: 10, rate: 18, disc: 0, gst: 0 },
-    { code: "P1005", name: "Instant Noodles 70g", hsn: "190230", qty: 20, rate: 12, disc: 0, gst: 12 }
-  ]);
+  // Items Cart State with LocalStorage Persistence
+  const [cartItems, setCartItems] = useState<PurchaseItem[]>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("myshop_purchase_cart");
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    }
+    return [
+      { code: "P1001", name: "Whole Wheat Atta 5KG", hsn: "110100", qty: 25, rate: 245, disc: 0, gst: 5 },
+      { code: "P1002", name: "Basmati Rice 1KG", hsn: "100630", qty: 20, rate: 115, disc: 0, gst: 5 },
+      { code: "P1003", name: "Sunflower Oil 1L", hsn: "151211", qty: 10, rate: 155, disc: 0, gst: 18 },
+      { code: "P1004", name: "Iodised Salt 1KG", hsn: "250100", qty: 10, rate: 18, disc: 0, gst: 0 },
+      { code: "P1005", name: "Instant Noodles 70g", hsn: "190230", qty: 20, rate: 12, disc: 0, gst: 12 }
+    ];
+  });
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("myshop_purchase_cart", JSON.stringify(cartItems));
+    }
+  }, [cartItems]);
 
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
   const [amountPaid, setAmountPaid] = useState<number>(0);
@@ -91,6 +110,23 @@ function Purchase() {
     }
     return PRODUCTS;
   });
+
+  // Sync state from localStorage when route is loaded/changed
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("myshop_products");
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (JSON.stringify(parsed) !== JSON.stringify(productList)) {
+            setProductList(parsed);
+          }
+        } catch (e) {
+          console.error("Failed to sync products from localStorage", e);
+        }
+      }
+    }
+  }, [pathname]);
 
   // Add/Edit Product Item State
   const [selectedProductCode, setSelectedProductCode] = useState(() => productList[0]?.code || "");

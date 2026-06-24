@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useRouterState } from "@tanstack/react-router";
 import { useMemo, useState, useEffect } from "react";
 import { DesktopLayout } from "@/components/desktop/DesktopLayout";
 import { CART_INITIAL, fmt } from "@/lib/sample-data";
@@ -13,6 +13,7 @@ export const Route = createFileRoute("/pos")({
 import { PRODUCTS, CUSTOMERS } from "@/lib/sample-data";
 
 function POS() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [productList, setProductList] = useState(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("myshop_products");
@@ -26,6 +27,23 @@ function POS() {
     }
     return PRODUCTS;
   });
+
+  // Sync state from localStorage when route is loaded/changed
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("myshop_products");
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (JSON.stringify(parsed) !== JSON.stringify(productList)) {
+            setProductList(parsed);
+          }
+        } catch (e) {
+          console.error("Failed to sync products from localStorage", e);
+        }
+      }
+    }
+  }, [pathname]);
   const [recallOpen, setRecallOpen] = useState(false);
   const [activePOSModal, setActivePOSModal] = useState<"PAYMENT" | "STOCK_CHECK" | "CUSTOMER_PICK" | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<"CASH" | "CARD" | "UPI" | "MULTI">("CASH");

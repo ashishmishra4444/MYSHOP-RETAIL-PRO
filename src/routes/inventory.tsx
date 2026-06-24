@@ -1,4 +1,4 @@
-import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { createFileRoute, useRouter, useRouterState } from "@tanstack/react-router";
 import { DesktopLayout, Panel, Field, Input, Select } from "@/components/desktop/DesktopLayout";
 import { PRODUCTS as INITIAL_PRODUCTS, fmt } from "@/lib/sample-data";
 import { Search, HelpCircle, Plus, Edit, RefreshCw, Barcode, Download, ArrowLeftRight, CheckSquare, Filter, ShieldAlert, Layers } from "lucide-react";
@@ -28,6 +28,7 @@ interface ProductItem {
 
 function Inventory() {
   const router = useRouter();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   // State Management
   const [productList, setProductList] = useState<ProductItem[]>(() => {
@@ -43,6 +44,23 @@ function Inventory() {
     }
     return INITIAL_PRODUCTS;
   });
+
+  // Sync state from localStorage when route is loaded/changed
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("myshop_products");
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (JSON.stringify(parsed) !== JSON.stringify(productList)) {
+            setProductList(parsed);
+          }
+        } catch (e) {
+          console.error("Failed to sync products from localStorage", e);
+        }
+      }
+    }
+  }, [pathname]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {

@@ -1,6 +1,7 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { Lock, User, Building2, Calendar, Eye, KeyRound, X, Clock, Info, CheckCircle2, MapPin } from "lucide-react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { Lock, User, Building2, Calendar, Eye, KeyRound, X, Clock, Info, CheckCircle2, MapPin, EyeOff } from "lucide-react";
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/login")({
   head: () => ({ meta: [{ title: "Login — MyShop Retail Pro" }] }),
@@ -10,6 +11,12 @@ export const Route = createFileRoute("/login")({
 function LoginPage() {
   const [time, setTime] = useState("");
   const [date, setDate] = useState("");
+  const navigate = useNavigate();
+
+  const [selectedUser, setSelectedUser] = useState("admin");
+  const [password, setPassword] = useState("adminpass");
+  const [showPassword, setShowPassword] = useState(false);
+  const [usersList, setUsersList] = useState<any[]>([]);
 
   useEffect(() => {
     const updateDateTime = () => {
@@ -21,6 +28,76 @@ function LoginPage() {
     const interval = setInterval(updateDateTime, 1000);
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("myshop_users");
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          setUsersList(parsed);
+          if (parsed.length > 0) {
+            setSelectedUser(parsed[0].username);
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      } else {
+        const defaultUsers = [
+          { id: 1, name: "Admin Operator", username: "admin", role: "Administrator", status: "Active" },
+          { id: 2, name: "Amit Kumar", username: "amit", role: "Manager", status: "Active" },
+          { id: 3, name: "Cashier Terminal 1", username: "cashier1", role: "Cashier", status: "Active" }
+        ];
+        setUsersList(defaultUsers);
+        localStorage.setItem("myshop_users", JSON.stringify(defaultUsers));
+      }
+    }
+  }, []);
+
+  // Update password field to match selected user default profile for convenience
+  useEffect(() => {
+    if (selectedUser === "admin") {
+      setPassword("adminpass");
+    } else if (selectedUser === "amit") {
+      setPassword("amitpass");
+    } else if (selectedUser === "cashier1") {
+      setPassword("cashier1pass");
+    } else {
+      setPassword(selectedUser + "pass");
+    }
+  }, [selectedUser]);
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    const user = usersList.find((u) => u.username.toLowerCase() === selectedUser.toLowerCase());
+    if (!user) {
+      toast.error("Invalid user selection.");
+      return;
+    }
+
+    if (user.status !== "Active") {
+      toast.error(`User profile @${user.username} is currently inactive.`);
+      return;
+    }
+
+    const expectedPass = user.username === "admin" ? "adminpass" :
+                         user.username === "amit" ? "amitpass" :
+                         user.username === "cashier1" ? "cashier1pass" :
+                         user.username + "pass";
+
+    if (password !== expectedPass) {
+      toast.error("Incorrect password. Please try again.");
+      return;
+    }
+
+    if (typeof window !== "undefined") {
+      localStorage.setItem("myshop_session_active", "true");
+      localStorage.setItem("myshop_current_user", JSON.stringify(user));
+    }
+
+    toast.success(`Welcome back, ${user.name}!`);
+    navigate({ to: "/", replace: true });
+  };
 
   return (
     <div className="flex h-screen flex-col bg-white text-slate-800 overflow-hidden font-sans select-none">
@@ -34,12 +111,12 @@ function LoginPage() {
         <div className="flex items-center gap-4 text-xs font-mono select-none">
           <button className="hover:bg-white/10 px-2 py-0.5 rounded-sm">—</button>
           <button className="hover:bg-white/10 px-2 py-0.5 rounded-sm">▢</button>
-          <button className="hover:bg-destructive px-2 py-0.5 rounded-sm">✕</button>
+          <button className="hover:bg-[#d32f2f] px-2 py-0.5 rounded-sm">✕</button>
         </div>
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col items-center justify-center p-6">
+      <div className="flex-1 flex flex-col items-center justify-center p-6 bg-slate-50">
         <div className="w-full max-w-4xl space-y-5">
           
           {/* Top Logo and Tagline Grid */}
@@ -60,21 +137,17 @@ function LoginPage() {
               </div>
             </div>
 
-            {/* Right Top Illustration (SVG Drawing of Monitor, Calculator, Label) */}
+            {/* Right Top Illustration */}
             <div className="flex items-center">
               <svg className="h-16 w-36" viewBox="0 0 160 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-                {/* Monitor */}
                 <rect x="15" y="10" width="44" height="28" rx="2" fill="#0047BA" />
                 <rect x="18" y="13" width="38" height="22" fill="white" />
-                {/* Shopping Cart inside screen */}
                 <path d="M23 18h2.5l2 5h8.5l1.5-3.5h-9.5" stroke="#0047BA" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
                 <circle cx="28.5" cy="25.5" r="1.2" fill="#0047BA" />
                 <circle cx="35.5" cy="25.5" r="1.2" fill="#0047BA" />
-                {/* Stand */}
                 <path d="M32 38h10v4H32z" fill="#0A2A5C" />
                 <path d="M27 42h20v2H27z" fill="#0A2A5C" />
 
-                {/* Calculator */}
                 <rect x="68" y="22" width="20" height="28" rx="2" fill="#0A2A5C" />
                 <rect x="71" y="25" width="14" height="7" fill="#E6EFFC" />
                 <circle cx="73" cy="36" r="1" fill="white" />
@@ -87,12 +160,10 @@ function LoginPage() {
                 <circle cx="78" cy="44" r="1" fill="white" />
                 <circle cx="83" cy="44" r="1" fill="white" />
 
-                {/* Printer & Labels */}
                 <rect x="99" y="12" width="28" height="22" rx="2" fill="#0047BA" />
                 <rect x="103" y="9" width="20" height="5" fill="#E2E8F0" />
                 <path d="M106 11h14" stroke="#4A5568" strokeWidth="1" />
                 <rect x="99" y="30" width="28" height="16" fill="#F59E0B" rx="1" />
-                {/* Barcode lines */}
                 <path d="M103 34h2v8h-2zm4 0h1v8h-1zm3 0h2v8h-2zm4 0h1v8h-1zm3 0h2v8h-2z" fill="#000" />
               </svg>
             </div>
@@ -110,18 +181,13 @@ function LoginPage() {
               {/* Left Side Illustration */}
               <div className="flex items-center justify-center border-r border-slate-100 pr-6">
                 <svg className="h-40 w-48" viewBox="0 0 120 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  {/* Monitor */}
                   <rect x="15" y="10" width="70" height="46" rx="3" fill="#1A365D" />
                   <rect x="19" y="14" width="62" height="38" fill="white" />
-                  {/* Stand */}
                   <path d="M44 56h12v10H44z" fill="#0F172A" />
                   <path d="M35 66h30v3H35z" fill="#0F172A" />
-                  {/* Profile avatar */}
                   <circle cx="50" cy="27" r="8" fill="#0047BA" />
                   <path d="M34 45c0-6 7-8 16-8s16 2 16 8v3H34v-3z" fill="#0047BA" />
-                  {/* Shadow */}
                   <ellipse cx="50" cy="74" rx="30" ry="3" fill="#E2E8F0" />
-                  {/* Padlock */}
                   <rect x="65" y="44" width="22" height="18" rx="2" fill="#F59E0B" stroke="#B45309" strokeWidth="1" />
                   <path d="M70 44v-4c0-3.3 2.7-6 6-6s6 2.7 6 6v4" stroke="#475569" strokeWidth="2" fill="none" />
                   <circle cx="76" cy="51" r="1.5" fill="#000" />
@@ -130,19 +196,37 @@ function LoginPage() {
               </div>
 
               {/* Form Input fields */}
-              <form className="space-y-3 pl-4">
+              <form onSubmit={handleLogin} className="space-y-3 pl-4">
                 
                 <FieldRow label="User Name" icon={<User className="h-4 w-4 text-slate-500" />}>
-                  <select className="erp-input w-full border-[#C2D6E9] text-slate-800 bg-white focus:border-[#0047BA] focus:ring-1 focus:ring-[#0047BA] rounded-sm font-semibold">
-                    <option>ADMIN</option>
-                    <option>SALESMAN</option>
+                  <select 
+                    value={selectedUser} 
+                    onChange={(e) => setSelectedUser(e.target.value)}
+                    className="erp-input w-full border-[#C2D6E9] text-slate-800 bg-white focus:border-[#0047BA] focus:ring-1 focus:ring-[#0047BA] rounded-sm font-semibold"
+                  >
+                    {usersList.map((u) => (
+                      <option key={u.id} value={u.username}>
+                        {u.username.toUpperCase()} ({u.role})
+                      </option>
+                    ))}
                   </select>
                 </FieldRow>
 
                 <FieldRow label="Password" icon={<Lock className="h-4 w-4 text-slate-500" />}>
                   <div className="relative">
-                    <input type="password" name="password" className="erp-input w-full pr-9 border-[#C2D6E9] text-slate-800 bg-white focus:border-[#0047BA] focus:ring-1 focus:ring-[#0047BA] rounded-sm" defaultValue="adminpass" />
-                    <Eye className="absolute right-2 top-1.5 h-4 w-4 text-slate-400 hover:text-slate-700 cursor-pointer" />
+                    <input 
+                      type={showPassword ? "text" : "password"} 
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="erp-input w-full pr-9 border-[#C2D6E9] text-slate-800 bg-white focus:border-[#0047BA] focus:ring-1 focus:ring-[#0047BA] rounded-sm font-mono" 
+                    />
+                    <button 
+                      type="button" 
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-2 top-2 text-slate-400 hover:text-slate-700"
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
                   </div>
                 </FieldRow>
 
@@ -162,21 +246,25 @@ function LoginPage() {
 
                 {/* Form Buttons */}
                 <div className="flex gap-2.5 pt-3">
-                  <Link 
-                    to="/" 
-                    className="flex h-9 items-center gap-1.5 rounded-sm bg-[#0047BA] hover:bg-[#003da8] px-6 font-semibold text-white transition-colors"
+                  <button 
+                    type="submit" 
+                    className="flex h-9 items-center gap-1.5 rounded-sm bg-[#0047BA] hover:bg-[#003da8] px-6 font-semibold text-white transition-colors cursor-pointer"
                   >
                     <Lock className="h-4 w-4" /> Login
-                  </Link>
+                  </button>
                   <button 
                     type="button" 
-                    className="flex h-9 items-center gap-1.5 rounded-sm border border-slate-300 bg-white hover:bg-slate-50 px-5 text-slate-700 font-semibold transition-colors"
+                    onClick={() => {
+                      setPassword("");
+                    }}
+                    className="flex h-9 items-center gap-1.5 rounded-sm border border-slate-300 bg-white hover:bg-slate-50 px-5 text-slate-700 font-semibold transition-colors cursor-pointer"
                   >
                     <X className="h-4 w-4" /> Cancel
                   </button>
                   <button 
                     type="button" 
-                    className="flex h-9 items-center gap-1.5 rounded-sm border border-slate-300 bg-white hover:bg-slate-50 px-4 text-slate-700 font-semibold transition-colors"
+                    onClick={() => toast.info("Password changes require administrator privileges.")}
+                    className="flex h-9 items-center gap-1.5 rounded-sm border border-slate-300 bg-white hover:bg-slate-50 px-4 text-slate-700 font-semibold transition-colors cursor-pointer"
                   >
                     <KeyRound className="h-4 w-4" /> Change Password
                   </button>

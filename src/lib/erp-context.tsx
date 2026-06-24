@@ -183,6 +183,10 @@ export function ToolbarProvider({ children }: { children: React.ReactNode }) {
           setBarcodeModalOpen((prev) => !prev);
           return;
         case "EXIT":
+          if (typeof window !== "undefined") {
+            localStorage.removeItem("myshop_session_active");
+            localStorage.removeItem("myshop_current_user");
+          }
           router.navigate({ to: "/login" });
           return;
       }
