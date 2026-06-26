@@ -3,7 +3,7 @@ import { Link, useRouter, useRouterState } from "@tanstack/react-router";
 import {
   FilePlus, Pencil, Trash2, Save, Printer, Barcode, Package, PauseCircle,
   RotateCcw, Wallet, Boxes, LayoutDashboard, Users, Calculator as CalcIcon, Power,
-  Minus, Square, X, ChevronDown
+  Minus, Square, X, ChevronDown, Menu, ChevronRight
 } from "lucide-react";
 import { useToolbar } from "@/lib/erp-context";
 import Calculator from "./Calculator";
@@ -102,7 +102,8 @@ export function DesktopLayout({
   children: ReactNode;
   fnKeys?: { key: string; label: string; onClick?: () => void; tone?: "primary" | "danger" }[];
 }) {
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const routerState = useRouterState();
+  const pathname = routerState.location.pathname;
   const router = useRouter();
   const sub = TITLES[pathname] ?? "";
   const [timeStr, setTimeStr] = useState("");
@@ -140,6 +141,7 @@ export function DesktopLayout({
   const [isUserMgmtOpen, setUserMgmtOpen] = useState(false);
   const [isDocsOpen, setDocsOpen] = useState(false);
   const [isAboutOpen, setAboutOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [docsTab, setDocsTab] = useState("overview");
 
   // Settings State variables
@@ -258,6 +260,10 @@ export function DesktopLayout({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [fnKeys]);
 
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [pathname]);
+
   const isRouteAllowed = (path?: string) => {
     if (!path || path === "#" || currentUser.role === "Administrator") return true;
     const allowed = ROLE_PERMISSIONS[currentUser.role] || [];
@@ -290,21 +296,29 @@ export function DesktopLayout({
   return (
     <div className="flex h-screen flex-col bg-background text-foreground select-none">
       {/* Title bar */}
-      <div className="flex h-8 items-center justify-between bg-titlebar px-3 text-titlebar-foreground">
+      <div className="flex h-10 lg:h-8 items-center justify-between bg-titlebar px-3 text-titlebar-foreground">
         <div className="flex items-center gap-2 text-[12.5px] font-medium">
+          <button
+            type="button"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="lg:hidden p-1 rounded-sm hover:bg-white/15 mr-0.5 cursor-pointer"
+          >
+            <Menu className="h-4 w-4" />
+          </button>
           <div className="grid h-5 w-5 place-items-center rounded-sm bg-white/15 text-[10px] font-bold">MS</div>
-          <span>{companyName}</span>
-          <span className="opacity-70">— Main Division{sub && ` — [${sub}]`}</span>
+          <span className="font-semibold">{companyName}</span>
+          <span className="opacity-70 hidden sm:inline">— Main Division{sub && ` — [${sub}]`}</span>
+          <span className="opacity-70 sm:hidden">{sub && ` — [${sub}]`}</span>
         </div>
         <div className="flex items-center gap-1">
-          <button className="grid h-6 w-9 place-items-center hover:bg-white/15"><Minus className="h-3.5 w-3.5"/></button>
-          <button className="grid h-6 w-9 place-items-center hover:bg-white/15"><Square className="h-3 w-3"/></button>
+          <button className="hidden sm:grid h-6 w-9 place-items-center hover:bg-white/15"><Minus className="h-3.5 w-3.5"/></button>
+          <button className="hidden sm:grid h-6 w-9 place-items-center hover:bg-white/15"><Square className="h-3 w-3"/></button>
           <button onClick={() => dispatchCommand("EXIT")} className="grid h-6 w-9 place-items-center hover:bg-destructive"><X className="h-3.5 w-3.5"/></button>
         </div>
       </div>
 
       {/* Menu bar */}
-      <div className="flex h-8 items-center gap-0.5 border-b border-border bg-menubar px-2 text-[12.5px]">
+      <div className="hidden lg:flex h-8 items-center gap-0.5 border-b border-border bg-menubar px-2 text-[12.5px]">
         {filteredMenu.map((m) => (
           <div key={m.label} className="group relative">
             <button className="flex items-center gap-1 rounded-sm px-2.5 py-1 hover:bg-accent hover:text-accent-foreground">
@@ -338,7 +352,7 @@ export function DesktopLayout({
       </div>
 
       {/* Toolbar */}
-      <div className="flex items-center gap-1 border-b border-border bg-toolbar px-2 py-1.5">
+      <div className="flex items-center gap-1 border-b border-border bg-toolbar px-2 py-1.5 overflow-x-auto select-none flex-nowrap lg:flex-wrap max-w-full scrollbar-thin">
         {TOOLS.map((t, i) => {
           const enabled = isCommandAvailable(t.cmd);
           return (
@@ -347,7 +361,7 @@ export function DesktopLayout({
               type="button"
               disabled={!enabled}
               onClick={() => dispatchCommand(t.cmd)}
-              className={`flex h-14 w-[64px] flex-col items-center justify-center gap-1 rounded-sm border border-transparent text-[11px] select-none ${
+              className={`flex h-14 w-[64px] flex-col items-center justify-center gap-1 rounded-sm border border-transparent text-[11px] select-none shrink-0 lg:shrink ${
                 enabled
                   ? "hover:border-border hover:bg-accent cursor-pointer opacity-100"
                   : "opacity-40 cursor-not-allowed"
@@ -862,12 +876,12 @@ export function DesktopLayout({
 
       {/* F-key bar */}
       {fnKeys && fnKeys.length > 0 && (
-        <div className="grid grid-cols-12 gap-1 border-t border-border bg-toolbar p-1.5">
+        <div className="flex overflow-x-auto lg:grid lg:grid-cols-12 gap-1 border-t border-border bg-toolbar p-1.5 flex-nowrap max-w-full scrollbar-thin">
           {fnKeys.map((k, i) => (
             <button
               key={i}
               onClick={k.onClick}
-              className={`flex h-12 flex-col items-center justify-center rounded-sm border text-[11.5px] font-medium ${
+              className={`flex h-12 min-w-[90px] lg:min-w-0 flex-col items-center justify-center rounded-sm border text-[11.5px] font-medium shrink-0 lg:shrink ${
                 k.tone === "primary"
                   ? "border-primary bg-primary text-primary-foreground"
                   : k.tone === "danger"
@@ -879,6 +893,85 @@ export function DesktopLayout({
               <span>{k.label}</span>
             </button>
           ))}
+        </div>
+      )}
+
+      {/* Mobile drawer menu */}
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 z-50 flex lg:hidden">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/50 transition-opacity"
+            onClick={() => setIsMobileMenuOpen(false)}
+          />
+          {/* Menu Panel */}
+          <div className="relative flex w-full max-w-[280px] flex-col bg-background border-r border-border shadow-xl">
+            {/* Header */}
+            <div className="flex h-12 items-center justify-between bg-primary px-4 text-primary-foreground">
+              <span className="font-bold">MyShop Menu</span>
+              <button
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="rounded p-1 hover:bg-white/10 text-primary-foreground cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            {/* User Info */}
+            <div className="border-b border-border bg-muted/30 p-3 text-xs">
+              <div className="font-semibold text-slate-700">Operator Profile</div>
+              <div className="mt-1 font-bold text-primary">{currentUser.name}</div>
+              <div className="text-[10px] text-muted-foreground">{currentUser.role} • @{currentUser.username}</div>
+              <button
+                type="button"
+                onClick={() => {
+                  setSwitchUserOpen(true);
+                  setIsMobileMenuOpen(false);
+                }}
+                className="mt-2 text-primary font-bold hover:underline cursor-pointer"
+              >
+                Switch Profile
+              </button>
+            </div>
+            {/* Menu List */}
+            <div className="flex-1 overflow-y-auto p-2 space-y-2 text-xs">
+              {filteredMenu.map((m) => (
+                <div key={m.label} className="space-y-1">
+                  <div className="px-2 py-1 font-bold text-slate-400 uppercase tracking-wider text-[10px]">{m.label}</div>
+                  {m.items && (
+                    <div className="pl-2 space-y-0.5">
+                      {m.items.map((it) => (
+                        it.cmd ? (
+                          <button
+                            key={it.label}
+                            type="button"
+                            onClick={() => {
+                              handleMenuClick(it);
+                              setIsMobileMenuOpen(false);
+                            }}
+                            className="flex w-full items-center justify-between rounded px-2 py-1.5 hover:bg-accent text-left cursor-pointer"
+                          >
+                            <span>{it.label}</span>
+                            <ChevronRight className="h-3.5 w-3.5 opacity-40" />
+                          </button>
+                        ) : it.to ? (
+                          <Link
+                            key={it.label}
+                            to={it.to}
+                            onClick={() => setIsMobileMenuOpen(false)}
+                            className="flex items-center justify-between rounded px-2 py-1.5 hover:bg-accent text-left"
+                            activeProps={{ className: "bg-primary/10 text-primary font-semibold" }}
+                          >
+                            <span>{it.label}</span>
+                            <ChevronRight className="h-3.5 w-3.5 opacity-40" />
+                          </Link>
+                        ) : null
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       )}
 

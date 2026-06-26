@@ -117,7 +117,7 @@ function CashBook() {
       { key: "F11", label: "Refresh", onClick: handleRefresh },
       { key: "F12", label: "Close", onClick: () => router.navigate({ to: "/" }) },
     ]}>
-      <div className="mb-2 flex items-center gap-2 text-[12.5px]">
+      <div className="mb-2 flex flex-wrap items-center gap-2 text-[12.5px]">
         <span>Date</span><input className="erp-input w-32" defaultValue="17/06/2024"/>
         <span>Counter</span><select className="erp-input w-32"><option>POS-01</option></select>
         <span>Cashier</span><select className="erp-input w-32"><option>ADMIN</option></select>
@@ -128,7 +128,7 @@ function CashBook() {
         )}
       </div>
 
-      <div className="grid grid-cols-4 gap-2 mb-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 mb-3">
         <Stat label="Opening Balance" value={`₹ ${fmt(5000)}`}/>
         <Stat label="Total Cash In" value={`₹ ${fmt(inflow)}`} tone="text-[color:var(--color-success)]"/>
         <Stat label="Total Cash Out" value={`₹ ${fmt(outflow)}`} tone="text-destructive"/>
@@ -136,8 +136,9 @@ function CashBook() {
       </div>
 
       <Panel title="Cash Book — Day Transactions">
-        <table className="erp-grid">
-          <thead><tr>
+        <div className="overflow-x-auto max-w-full">
+          <table className="erp-grid">
+            <thead><tr>
             <th className="erp-grid-th w-10">S.No</th><th className="erp-grid-th">Time</th>
             <th className="erp-grid-th">Type</th><th className="erp-grid-th">Particulars</th>
             <th className="erp-grid-th text-right">Cash In (₹)</th><th className="erp-grid-th text-right">Cash Out (₹)</th>
@@ -166,6 +167,7 @@ function CashBook() {
           </tr>
           </tbody>
         </table>
+      </div>
       </Panel>
 
       {/* HELP MODAL */}

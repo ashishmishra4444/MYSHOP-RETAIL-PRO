@@ -84,14 +84,14 @@ function Dashboard() {
       { key: "F12", label: "Refresh", tone: "primary", onClick: triggerRefresh },
     ]}>
       <Panel title="Dashboard / Business Summary">
-        <div className="grid grid-cols-[220px_1fr] gap-3">
+        <div className="grid grid-cols-1 lg:grid-cols-[220px_1fr] gap-3">
           <div className="erp-panel p-3 space-y-2">
             <div className="text-[12px] font-semibold text-primary">Date Filter</div>
             <label className="block text-[12px]">From Date<input className="erp-input mt-1 w-full" defaultValue="01/06/2024"/></label>
             <label className="block text-[12px]">To Date<input className="erp-input mt-1 w-full" defaultValue="17/06/2024"/></label>
             <button onClick={triggerRefresh} className="mt-2 w-full rounded-sm bg-primary py-1.5 text-primary-foreground text-[12.5px] hover:bg-primary/90">↻ Refresh</button>
           </div>
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <Kpi onClick={() => { setActiveModal("SALES"); toast.info("Loading Sales Summary..."); }} icon={TrendingUp} label="Sales (This Month)" value={`₹ ${fmt(125430)}`} tone="bg-[color:var(--color-chart-1)]"/>
             <Kpi onClick={() => { setActiveModal("PURCHASE"); toast.info("Loading Purchase Summary..."); }} icon={ShoppingBag} label="Purchase (This Month)" value={`₹ ${fmt(98350)}`} tone="bg-[color:var(--color-chart-2)]"/>
             <Kpi onClick={() => { setActiveModal("CASHBANK"); toast.info("Loading Cash & Bank Ledgers..."); }} icon={ReceiptText} label="Receipt (This Month)" value={`₹ ${fmt(130000)}`} tone="bg-[color:var(--color-chart-3)]"/>
@@ -99,7 +99,7 @@ function Dashboard() {
           </div>
         </div>
 
-        <div className="mt-3 grid grid-cols-7 gap-2">
+        <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
           <Mini onClick={() => { setActiveModal("STOCK"); toast.info("Loading Stock Valuation..."); }} label="Total Items" value="1,256"/>
           <Mini onClick={() => { setActiveModal("STOCK"); toast.info("Loading Stock Valuation..."); }} label="Low Stock" value="15" tone="text-[color:var(--color-warning)]"/>
           <Mini onClick={() => { setActiveModal("STOCK"); toast.info("Loading Stock Valuation..."); }} label="Out of Stock" value="7" tone="text-destructive"/>
@@ -109,7 +109,7 @@ function Dashboard() {
           <Mini onClick={() => { setActiveModal("SALES"); toast.info("Loading Sales Summary..."); }} label="Quotations (Mo)" value="12"/>
         </div>
 
-        <div className="mt-3 grid grid-cols-3 gap-3">
+        <div className="mt-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           <div className="erp-panel">
             <div className="border-b border-border bg-secondary px-3 py-1.5 text-[12.5px] font-semibold text-primary">Sales Trend (This Month)</div>
             <div className="h-56 p-2">
@@ -152,7 +152,7 @@ function Dashboard() {
           </div>
         </div>
 
-        <div className="mt-3 grid grid-cols-3 gap-3">
+        <div className="mt-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           <div className="erp-panel">
             <div className="border-b border-border bg-secondary px-3 py-1.5 text-[12.5px] font-semibold text-primary">Payment Due (Customers)</div>
             <table className="erp-grid">
@@ -182,7 +182,7 @@ function Dashboard() {
         </div>
 
         {/* Festival Campaign Marketing Widgets */}
-        <div className="mt-3 grid grid-cols-[1fr_400px] gap-3">
+        <div className="mt-3 grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-3">
           <div className="erp-panel">
             <div className="border-b border-border bg-secondary px-3 py-1.5 text-[12.5px] font-semibold text-primary">Active Promotional Campaigns &amp; Broadcast Logs</div>
             <table className="erp-grid">

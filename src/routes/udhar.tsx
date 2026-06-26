@@ -430,25 +430,25 @@ function Udhar() {
       { key: "F12", label: "Close", onClick: () => router.navigate({ to: "/" }) },
     ]}>
       <Panel title="Select Customer">
-        <div className="grid grid-cols-[2fr_1fr_1fr] gap-3 text-[12.5px]">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-[12.5px]">
           <div className="space-y-1">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <b>{currentCustomer.code} — {currentCustomer.name}</b>
               <button 
                 onClick={() => setActiveModal("SEARCH")}
-                className="rounded border border-border bg-secondary px-2 py-0.5 text-[11px] font-semibold text-primary hover:bg-muted"
+                className="rounded border border-border bg-secondary px-2 py-0.5 text-[11px] font-semibold text-primary hover:bg-muted cursor-pointer"
               >
                 Change (F3)
               </button>
               <button 
                 onClick={() => setActiveModal("ADD_CUSTOMER")}
-                className="rounded border border-[color:var(--color-success)] bg-[color:var(--color-success)] px-2 py-0.5 text-[11px] font-semibold text-white hover:opacity-90"
+                className="rounded border border-[color:var(--color-success)] bg-[color:var(--color-success)] px-2 py-0.5 text-[11px] font-semibold text-white hover:opacity-90 cursor-pointer"
               >
                 + New Client
               </button>
               <button 
                 onClick={() => setActiveModal("EDIT_CUSTOMER")}
-                className="rounded border border-border bg-white px-2 py-0.5 text-[11px] font-semibold text-foreground hover:bg-muted"
+                className="rounded border border-border bg-white px-2 py-0.5 text-[11px] font-semibold text-foreground hover:bg-muted cursor-pointer"
               >
                 Edit Client
               </button>
@@ -472,7 +472,7 @@ function Udhar() {
         </div>
       </Panel>
 
-      <div className="mt-3 grid grid-cols-[1fr_320px] gap-3">
+      <div className="mt-3 grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-3">
         <Panel title="Ledger Details">
           <div className="mb-2 flex flex-wrap items-center gap-2 text-[12.5px]">
             <span>Date From</span>
@@ -515,31 +515,33 @@ function Udhar() {
               <Bell className="h-3.5 w-3.5"/> Reminder Status
             </button>
           </div>
-          <table className="erp-grid">
-            <thead><tr>
-              <th className="erp-grid-th">Date</th><th className="erp-grid-th">Voucher No</th><th className="erp-grid-th">Type</th>
-              <th className="erp-grid-th">Ref / Narration</th><th className="erp-grid-th text-right">Debit (₹)</th>
-              <th className="erp-grid-th text-right">Credit (₹)</th><th className="erp-grid-th text-right">Balance</th><th className="erp-grid-th">Bal Type</th>
-            </tr></thead>
-            <tbody>
-              {filteredLedger.map((l, i) => (
-                <tr key={i} className={i%2 ? "bg-[color:var(--color-grid-row-alt)]" : ""}>
-                  <td className="erp-grid-td">{l.date}</td><td className="erp-grid-td">{l.voucher}</td>
-                  <td className="erp-grid-td">{l.type}</td><td className="erp-grid-td">{l.narration}</td>
-                  <td className="erp-grid-td text-right">{l.debit ? fmt(l.debit) : "0.00"}</td>
-                  <td className="erp-grid-td text-right text-[color:var(--color-success)]">{l.credit ? fmt(l.credit) : "0.00"}</td>
-                  <td className={`erp-grid-td text-right ${l.balance < 0 ? "text-[color:var(--color-success)]" : "text-destructive"}`}>{l.balance < 0 ? `${fmt(Math.abs(l.balance))} Cr` : `${fmt(l.balance)} Dr`}</td>
-                  <td className={`erp-grid-td ${l.balance < 0 ? "text-[color:var(--color-success)] font-semibold" : "text-destructive"}`}>{l.balance < 0 ? "Cr" : "Dr"}</td>
-                </tr>
-              ))}
-              {filteredLedger.length === 0 && (
-                <tr>
-                  <td colSpan={8} className="erp-grid-td text-center text-muted-foreground p-4">No matching transactions found for this date range/type</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-          <div className="mt-2 grid grid-cols-5 gap-2 text-[12.5px]">
+          <div className="overflow-x-auto max-w-full">
+            <table className="erp-grid">
+              <thead><tr>
+                <th className="erp-grid-th">Date</th><th className="erp-grid-th">Voucher No</th><th className="erp-grid-th">Type</th>
+                <th className="erp-grid-th">Ref / Narration</th><th className="erp-grid-th text-right">Debit (₹)</th>
+                <th className="erp-grid-th text-right">Credit (₹)</th><th className="erp-grid-th text-right">Balance</th><th className="erp-grid-th">Bal Type</th>
+              </tr></thead>
+              <tbody>
+                {filteredLedger.map((l, i) => (
+                  <tr key={i} className={i%2 ? "bg-[color:var(--color-grid-row-alt)]" : ""}>
+                    <td className="erp-grid-td">{l.date}</td><td className="erp-grid-td">{l.voucher}</td>
+                    <td className="erp-grid-td">{l.type}</td><td className="erp-grid-td">{l.narration}</td>
+                    <td className="erp-grid-td text-right">{l.debit ? fmt(l.debit) : "0.00"}</td>
+                    <td className="erp-grid-td text-right text-[color:var(--color-success)]">{l.credit ? fmt(l.credit) : "0.00"}</td>
+                    <td className={`erp-grid-td text-right ${l.balance < 0 ? "text-[color:var(--color-success)]" : "text-destructive"}`}>{l.balance < 0 ? `${fmt(Math.abs(l.balance))} Cr` : `${fmt(l.balance)} Dr`}</td>
+                    <td className={`erp-grid-td ${l.balance < 0 ? "text-[color:var(--color-success)] font-semibold" : "text-destructive"}`}>{l.balance < 0 ? "Cr" : "Dr"}</td>
+                  </tr>
+                ))}
+                {filteredLedger.length === 0 && (
+                  <tr>
+                    <td colSpan={8} className="erp-grid-td text-center text-muted-foreground p-4">No matching transactions found for this date range/type</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          <div className="mt-2 grid grid-cols-2 md:grid-cols-5 gap-2 text-[12.5px]">
             <Stat label="Opening Balance" value={currentCustomer.opening < 0 ? `${fmt(Math.abs(currentCustomer.opening))} Cr` : `${fmt(currentCustomer.opening)} Dr`} tone={currentCustomer.opening < 0 ? "text-[color:var(--color-success)]" : "text-destructive"}/>
             <Stat label="Total Debit" value={fmt(totalDebit)}/>
             <Stat label="Total Credit" value={fmt(totalCredit)} tone="text-[color:var(--color-success)]"/>
@@ -560,18 +562,20 @@ function Udhar() {
             </div>
           </Panel>
           <Panel title="Last 5 Receipts">
-            <table className="erp-grid">
-              <thead><tr><th className="erp-grid-th">Date</th><th className="erp-grid-th">Receipt No</th><th className="erp-grid-th text-right">Amount</th></tr></thead>
-              <tbody>{currentLedger.filter(l => l.type === "Receipt").slice(-5).reverse().map((l, i) => (
-                <tr key={i}><td className="erp-grid-td">{l.date}</td><td className="erp-grid-td">{l.voucher}</td><td className="erp-grid-td text-right">{fmt(l.credit)}</td></tr>
-              ))}
-              {currentLedger.filter(l => l.type === "Receipt").length === 0 && (
-                <tr>
-                  <td colSpan={3} className="erp-grid-td text-center text-muted-foreground">No recent receipts recorded</td>
-                </tr>
-              )}
-              </tbody>
-            </table>
+            <div className="overflow-x-auto max-w-full">
+              <table className="erp-grid">
+                <thead><tr><th className="erp-grid-th">Date</th><th className="erp-grid-th">Receipt No</th><th className="erp-grid-th text-right">Amount</th></tr></thead>
+                <tbody>{currentLedger.filter(l => l.type === "Receipt").slice(-5).reverse().map((l, i) => (
+                  <tr key={i}><td className="erp-grid-td">{l.date}</td><td className="erp-grid-td">{l.voucher}</td><td className="erp-grid-td text-right">{fmt(l.credit)}</td></tr>
+                ))}
+                {currentLedger.filter(l => l.type === "Receipt").length === 0 && (
+                  <tr>
+                    <td colSpan={3} className="erp-grid-td text-center text-muted-foreground">No recent receipts recorded</td>
+                  </tr>
+                )}
+                </tbody>
+              </table>
+            </div>
           </Panel>
         </div>
       </div>

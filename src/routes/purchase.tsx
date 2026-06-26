@@ -47,7 +47,8 @@ const MOCK_PAST_INVOICES = [
 
 function Purchase() {
   const router = useRouter();
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const routerState = useRouterState();
+  const pathname = routerState.location.pathname;
 
   // Master Form States
   const [supplier, setSupplier] = useState(SUPPLIERS[0]?.name || "");

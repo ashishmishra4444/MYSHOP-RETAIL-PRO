@@ -17,7 +17,8 @@ const BRANDS = ["Annapurna", "Royal", "Sundrop", "Tata", "Maggi", "Parle", "Madh
 const UNITS = ["PCS", "BOX", "KG", "LITER", "PACK", "BOTTLE", "GRAM", "DOZEN", "METER", "CAN", "BAG", "BOXES"];
 
 function ProductMaster() {
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const routerState = useRouterState();
+  const pathname = routerState.location.pathname;
   const [productList, setProductList] = useState(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("myshop_products");

@@ -13,7 +13,8 @@ export const Route = createFileRoute("/pos")({
 import { PRODUCTS, CUSTOMERS } from "@/lib/sample-data";
 
 function POS() {
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const routerState = useRouterState();
+  const pathname = routerState.location.pathname;
   const [productList, setProductList] = useState(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("myshop_products");

@@ -28,7 +28,8 @@ interface ProductItem {
 
 function Inventory() {
   const router = useRouter();
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const routerState = useRouterState();
+  const pathname = routerState.location.pathname;
 
   // State Management
   const [productList, setProductList] = useState<ProductItem[]>(() => {
