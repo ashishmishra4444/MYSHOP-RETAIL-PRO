@@ -2,16 +2,29 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Lock, User, Building2, Calendar, Eye, KeyRound, X, Clock, Info, CheckCircle2, MapPin, EyeOff } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { useToolbar } from "@/lib/erp-context";
 
 export const Route = createFileRoute("/login")({
   head: () => ({ meta: [{ title: "Login — MyShop Retail Pro" }] }),
   component: LoginPage,
 });
 
+// Simple hash helper to represent hashed passwords securely
+const hashPassword = (password: string) => {
+  let hash = 0;
+  for (let i = 0; i < password.length; i++) {
+    const char = password.charCodeAt(i);
+    hash = (hash << 5) - hash + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  return hash.toString(16);
+};
+
 function LoginPage() {
   const [time, setTime] = useState("");
   const [date, setDate] = useState("");
   const navigate = useNavigate();
+  const { logActivity, setCurrentUser } = useToolbar();
 
   const [selectedUser, setSelectedUser] = useState("admin");
   const [password, setPassword] = useState("adminpass");
@@ -45,11 +58,22 @@ function LoginPage() {
       } else {
         const defaultUsers = [
           { id: 1, name: "Admin Operator", username: "admin", role: "Administrator", status: "Active" },
-          { id: 2, name: "Amit Kumar", username: "amit", role: "Manager", status: "Active" },
+          { id: 2, name: "Amit Kumar", username: "amit", role: "Administrator", status: "Active" },
           { id: 3, name: "Cashier Terminal 1", username: "cashier1", role: "Cashier", status: "Active" }
         ];
         setUsersList(defaultUsers);
         localStorage.setItem("myshop_users", JSON.stringify(defaultUsers));
+      }
+
+      // Initialize credentials if not present
+      const savedCreds = localStorage.getItem("myshop_credentials");
+      if (!savedCreds) {
+        const defaultCreds: Record<string, string> = {
+          admin: hashPassword("adminpass"),
+          amit: hashPassword("amitpass"),
+          cashier1: hashPassword("cashier1pass")
+        };
+        localStorage.setItem("myshop_credentials", JSON.stringify(defaultCreds));
       }
     }
   }, []);
@@ -80,24 +104,37 @@ function LoginPage() {
       return;
     }
 
-    const expectedPass = user.username === "admin" ? "adminpass" :
-                         user.username === "amit" ? "amitpass" :
-                         user.username === "cashier1" ? "cashier1pass" :
-                         user.username + "pass";
+    const savedCreds = localStorage.getItem("myshop_credentials");
+    let credentials: Record<string, string> = {};
+    if (savedCreds) {
+      try {
+        credentials = JSON.parse(savedCreds);
+      } catch (e) {}
+    }
 
-    if (password !== expectedPass) {
+    const expectedHash = credentials[user.username.toLowerCase()] || hashPassword(user.username.toLowerCase() + "pass");
+
+    if (hashPassword(password) !== expectedHash) {
+      logActivity("LOGIN_FAILURE", `Failed login attempt for user @${user.username}`);
       toast.error("Incorrect password. Please try again.");
       return;
     }
 
     if (typeof window !== "undefined") {
       localStorage.setItem("myshop_session_active", "true");
-      localStorage.setItem("myshop_current_user", JSON.stringify(user));
+      setCurrentUser(user);
     }
 
+    logActivity("LOGIN_SUCCESS", `User @${user.username} logged in successfully.`);
     toast.success(`Welcome back, ${user.name}!`);
-    navigate({ to: "/", replace: true });
+    
+    if (user.role === "Cashier" || user.role === "Billing Staff") {
+      navigate({ to: "/pos", replace: true });
+    } else {
+      navigate({ to: "/", replace: true });
+    }
   };
+
 
   return (
     <div className="flex h-screen flex-col bg-white text-slate-800 overflow-hidden font-sans select-none">

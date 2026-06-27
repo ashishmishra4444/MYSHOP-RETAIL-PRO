@@ -22,6 +22,25 @@ export interface ERPPageRegistration {
   onCommand?: (command: string) => void;
 }
 
+export type UserRole = "Administrator" | "Billing Staff" | "Cashier" | "Inventory Clerk" | "Accountant";
+
+export interface User {
+  id: number;
+  name: string;
+  username: string;
+  role: UserRole;
+  status: "Active" | "Suspended";
+}
+
+export interface AuditLog {
+  id: string;
+  timestamp: string;
+  username: string;
+  role: string;
+  actionType: string;
+  narration: string;
+}
+
 interface ERPContextType {
   // Page Context
   activePage: ERPPageRegistration | null;
@@ -50,6 +69,14 @@ interface ERPContextType {
 
   // Commands dispatching
   dispatchCommand: (command: string) => void;
+
+  // Authentication & Auditing State
+  currentUser: User | null;
+  setCurrentUser: (user: User | null) => void;
+  usersList: User[];
+  setUsersList: React.Dispatch<React.SetStateAction<User[]>>;
+  auditLogs: AuditLog[];
+  logActivity: (actionType: string, narration: string) => void;
 }
 
 const ERPContext = createContext<ERPContextType | null>(null);
@@ -71,6 +98,86 @@ export function ToolbarProvider({ children }: { children: React.ReactNode }) {
 
   // Held Bills state
   const [heldBills, setHeldBills] = useState<HeldBill[]>([]);
+
+  // Centralized Auth State
+  const [currentUser, setCurrentUserState] = useState<User | null>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("myshop_current_user");
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch (e) {}
+      }
+    }
+    return { id: 1, name: "Admin Operator", username: "admin", role: "Administrator", status: "Active" };
+  });
+
+  const [usersList, setUsersList] = useState<User[]>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("myshop_users");
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch (e) {}
+      }
+    }
+    return [
+      { id: 1, name: "Admin Operator", username: "admin", role: "Administrator", status: "Active" },
+      { id: 2, name: "Amit Kumar", username: "amit", role: "Administrator", status: "Active" },
+      { id: 3, name: "Cashier Terminal 1", username: "cashier1", role: "Cashier", status: "Active" }
+    ];
+  });
+
+  // Sync users list to local storage
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("myshop_users", JSON.stringify(usersList));
+    }
+  }, [usersList]);
+
+  // Centralized Audit Log State
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("myshop_audit_logs");
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch (e) {}
+      }
+    }
+    return [];
+  });
+
+  // Sync audit logs to local storage
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("myshop_audit_logs", JSON.stringify(auditLogs));
+    }
+  }, [auditLogs]);
+
+  const setCurrentUser = useCallback((user: User | null) => {
+    setCurrentUserState(user);
+    if (typeof window !== "undefined") {
+      if (user) {
+        localStorage.setItem("myshop_current_user", JSON.stringify(user));
+      } else {
+        localStorage.removeItem("myshop_current_user");
+      }
+    }
+  }, []);
+
+  const logActivity = useCallback((actionType: string, narration: string) => {
+    const userToLog = currentUser || { username: "System", role: "System" };
+    const newLog: AuditLog = {
+      id: `AUD-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      timestamp: new Date().toISOString(),
+      username: userToLog.username,
+      role: userToLog.role,
+      actionType,
+      narration
+    };
+    setAuditLogs(prev => [newLog, ...prev]);
+  }, [currentUser]);
 
   // Page registration helper
   const registerPage = useCallback((page: ERPPageRegistration) => {
@@ -219,7 +326,13 @@ export function ToolbarProvider({ children }: { children: React.ReactNode }) {
         heldBills,
         holdPOSSession,
         recallPOSSession,
-        dispatchCommand
+        dispatchCommand,
+        currentUser,
+        setCurrentUser,
+        usersList,
+        setUsersList,
+        auditLogs,
+        logActivity
       }}
     >
       {children}
@@ -239,7 +352,13 @@ export function useToolbar() {
     setCalculatorOpen,
     isBarcodeModalOpen,
     setBarcodeModalOpen,
-    dispatchCommand
+    dispatchCommand,
+    currentUser,
+    setCurrentUser,
+    usersList,
+    setUsersList,
+    auditLogs,
+    logActivity
   } = context;
 
   // Derive disabled states for toolbar buttons
@@ -261,7 +380,13 @@ export function useToolbar() {
     setCalculatorOpen,
     isBarcodeModalOpen,
     setBarcodeModalOpen,
-    dispatchCommand
+    dispatchCommand,
+    currentUser,
+    setCurrentUser,
+    usersList,
+    setUsersList,
+    auditLogs,
+    logActivity
   };
 }
 
@@ -283,4 +408,51 @@ export function useERPCommands(registration: ERPPageRegistration | null) {
     updatePageMeta,
     context
   };
+}
+
+export const checkPermission = (role: string, feature: string): boolean => {
+  if (role === "Administrator") return true;
+
+  switch (feature) {
+    case "view_dashboard":
+      return ["Accountant"].includes(role);
+    case "process_sales":
+      return ["Billing Staff", "Cashier"].includes(role);
+    case "create_invoices":
+      return ["Billing Staff", "Cashier", "Accountant"].includes(role);
+    case "edit_invoices":
+      return ["Accountant"].includes(role);
+    case "create_quotations":
+      return ["Billing Staff", "Cashier"].includes(role);
+    case "edit_quotations":
+      return false;
+    case "inventory_view":
+      return ["Billing Staff", "Cashier", "Inventory Clerk", "Accountant"].includes(role);
+    case "inventory_edit":
+      return ["Inventory Clerk"].includes(role);
+    case "suppliers_view":
+      return ["Inventory Clerk", "Accountant"].includes(role);
+    case "suppliers_edit":
+      return ["Inventory Clerk"].includes(role);
+    case "customers_view":
+      return ["Billing Staff", "Cashier", "Accountant"].includes(role);
+    case "customers_create":
+      return ["Billing Staff", "Cashier"].includes(role);
+    case "low_stock":
+      return ["Billing Staff", "Cashier", "Inventory Clerk", "Accountant"].includes(role);
+    case "user_management":
+      return false;
+    case "expense_reports":
+      return ["Accountant"].includes(role);
+    default:
+      return false;
+  }
+};
+
+export function usePermissionCheck() {
+  const { currentUser } = useToolbar();
+  return useCallback((feature: string) => {
+    if (!currentUser) return false;
+    return checkPermission(currentUser.role, feature);
+  }, [currentUser]);
 }

@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { DesktopLayout, Panel } from "@/components/desktop/DesktopLayout";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, CartesianGrid } from "recharts";
 import { SALES_TREND, TOP_SELLING, CUSTOMERS, SUPPLIERS, PRODUCTS, EXPENSES, CASH_BOOK, LEDGER, fmt } from "@/lib/sample-data";
@@ -6,6 +6,7 @@ import { TrendingUp, ShoppingBag, ReceiptText, CreditCard, X, HelpCircle, FileTe
 import { CAMPAIGNS, FESTIVALS, CAMPAIGN_LOGS } from "@/lib/marketing-store";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { usePermissionCheck, useToolbar } from "@/lib/erp-context";
 
 export const Route = createFileRoute("/")({
   head: () => ({ meta: [{ title: "Dashboard — MyShop Retail Pro" }, { name: "description", content: "Business summary, sales, purchases and profit overview." }] }),
@@ -33,6 +34,10 @@ function Mini({ label, value, tone = "", onClick }: any) {
 }
 
 function Dashboard() {
+  const navigate = useNavigate();
+  const { currentUser } = useToolbar();
+  const hasPermission = usePermissionCheck();
+
   const [productList, setProductList] = useState(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("myshop_products");
@@ -49,6 +54,16 @@ function Dashboard() {
   const [activeModal, setActiveModal] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const profit = [{ name: "Gross", value: 27080, c: "var(--color-chart-2)" }, { name: "Exp", value: 9650, c: "var(--color-destructive)" }];
+
+  useEffect(() => {
+    if (currentUser) {
+      if (currentUser.role === "Cashier" || currentUser.role === "Billing Staff") {
+        navigate({ to: "/pos", replace: true });
+      } else if (currentUser.role === "Inventory Clerk") {
+        navigate({ to: "/inventory", replace: true });
+      }
+    }
+  }, [currentUser, navigate]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -68,6 +83,21 @@ function Dashboard() {
       toast.success("ERP databases successfully synchronized!");
     }, 1000);
   };
+
+  if (!hasPermission("view_dashboard")) {
+    return (
+      <DesktopLayout>
+        <div className="flex h-full flex-col items-center justify-center bg-muted/20 p-6 text-center select-text">
+          <div className="erp-panel max-w-md border-destructive shadow-2xl p-6">
+            <h1 className="text-lg font-bold text-foreground">Access Restricted</h1>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Your profile is not authorized to view the Business Summary Dashboard.
+            </p>
+          </div>
+        </div>
+      </DesktopLayout>
+    );
+  }
   return (
     <DesktopLayout fnKeys={[
       { key: "F1", label: "Help", onClick: () => { setActiveModal("HELP"); toast.info("Opening System Reference Guide..."); } },

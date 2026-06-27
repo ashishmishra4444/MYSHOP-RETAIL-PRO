@@ -10,14 +10,23 @@ import Calculator from "./Calculator";
 import BarcodeGenerator from "./BarcodeGenerator";
 import { toast } from "sonner";
 
+const hashPassword = (password: string) => {
+  let hash = 0;
+  for (let i = 0; i < password.length; i++) {
+    const char = password.charCodeAt(i);
+    hash = (hash << 5) - hash + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  return hash.toString(16);
+};
+
 type MenuItem = { label: string; items?: { label: string; to?: string; cmd?: string }[] };
 
 const ROLE_PERMISSIONS: Record<string, string[]> = {
   "Cashier": ["/pos", "/login"],
-  "Manager": [
-    "/", "/pos", "/sales-invoice", "/products", "/customers", "/suppliers", 
-    "/purchase", "/inventory", "/campaigns", "/notifications", "/festival-calendar", "/reports"
-  ],
+  "Billing Staff": ["/pos", "/login"],
+  "Inventory Clerk": ["/inventory", "/products", "/suppliers", "/login"],
+  "Accountant": ["/", "/products", "/suppliers", "/customers", "/expenses", "/reports", "/login", "/udhar", "/cashbook"],
   "Administrator": ["*"]
 };
 
@@ -133,8 +142,24 @@ export function DesktopLayout({
     setCalculatorOpen,
     isBarcodeModalOpen,
     setBarcodeModalOpen,
-    dispatchCommand
+    dispatchCommand,
+    currentUser,
+    setCurrentUser,
+    usersList,
+    setUsersList,
+    auditLogs,
+    logActivity
   } = useToolbar();
+
+  // Navigation Guard: Redirect to /login if no active session is present
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const sessionActive = localStorage.getItem("myshop_session_active");
+      if (sessionActive !== "true") {
+        router.navigate({ to: "/login", replace: true });
+      }
+    }
+  }, [router, routerState.location.pathname]);
 
   const [isBackupOpen, setBackupOpen] = useState(false);
   const [isSettingsOpen, setSettingsOpen] = useState(false);
@@ -174,37 +199,6 @@ export function DesktopLayout({
 
   // User Management State variables
   const [userTab, setUserTab] = useState("list");
-  const [usersList, setUsersList] = useState(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("myshop_users");
-      if (saved) return JSON.parse(saved);
-    }
-    return [
-      { id: 1, name: "Admin Operator", username: "admin", role: "Administrator", status: "Active" },
-      { id: 2, name: "Amit Kumar", username: "amit", role: "Manager", status: "Active" },
-      { id: 3, name: "Cashier Terminal 1", username: "cashier1", role: "Cashier", status: "Active" }
-    ];
-  });
-
-  // Current user state with LocalStorage persistence
-  const [currentUser, setCurrentUser] = useState(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("myshop_current_user");
-      if (saved) {
-        try {
-          return JSON.parse(saved);
-        } catch (e) {}
-      }
-    }
-    return { id: 1, name: "Admin Operator", username: "admin", role: "Administrator", status: "Active" };
-  });
-
-  // Sync users to localStorage
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("myshop_users", JSON.stringify(usersList));
-    }
-  }, [usersList]);
 
   // Add User states
   const [newUserName, setNewUserName] = useState("");
@@ -265,18 +259,22 @@ export function DesktopLayout({
   }, [pathname]);
 
   const isRouteAllowed = (path?: string) => {
-    if (!path || path === "#" || currentUser.role === "Administrator") return true;
+    if (!path || path === "#" || !currentUser || currentUser.role === "Administrator") return true;
     const allowed = ROLE_PERMISSIONS[currentUser.role] || [];
     return allowed.includes(path);
   };
 
   const isCmdAllowed = (cmd?: string) => {
-    if (!cmd || currentUser.role === "Administrator") return true;
-    if (currentUser.role === "Cashier") {
+    if (!cmd || !currentUser || currentUser.role === "Administrator") return true;
+    if (currentUser.role === "Cashier" || currentUser.role === "Billing Staff") {
       return ["CALCULATOR", "SWITCH_USER"].includes(cmd);
     }
-    if (currentUser.role === "Manager") {
-      return ["CALCULATOR", "BACKUP", "SWITCH_USER"].includes(cmd);
+
+    if (currentUser.role === "Inventory Clerk") {
+      return ["CALCULATOR", "SWITCH_USER", "BACKUP"].includes(cmd);
+    }
+    if (currentUser.role === "Accountant") {
+      return ["CALCULATOR", "SWITCH_USER"].includes(cmd);
     }
     return false;
   };
@@ -452,6 +450,7 @@ export function DesktopLayout({
                     link.click();
                     document.body.removeChild(link);
                     
+                    logActivity("BACKUP_DOWNLOAD", "Complete store database ledger backup JSON downloaded successfully.");
                     toast.success("Database Backup JSON downloaded successfully!");
                   }}
                   className="w-full rounded bg-primary py-2 text-xs font-semibold text-primary-foreground hover:opacity-90 cursor-pointer"
@@ -635,6 +634,7 @@ export function DesktopLayout({
                   localStorage.setItem("myshop_paper_size", settPaper);
                   
                   setCompanyName(settName);
+                  logActivity("BRANCH_UPDATE", `Updated settings for ${settName}`);
                   toast.success("Settings saved successfully!");
                   setSettingsOpen(false);
                 }}
@@ -675,6 +675,12 @@ export function DesktopLayout({
               >
                 Role Permissions List
               </button>
+              <button 
+                onClick={() => setUserTab("audit")} 
+                className={`px-4 py-2 font-medium border-r border-border hover:bg-accent ${userTab === "audit" ? "bg-white border-b-2 border-b-primary font-semibold" : ""}`}
+              >
+                📜 Security Audit Log
+              </button>
             </div>
 
             <div className="p-4 text-[12.5px] min-h-[260px] max-h-[360px] overflow-y-auto">
@@ -710,11 +716,23 @@ export function DesktopLayout({
                                     setUsersList(filtered);
                                     toast.success(`User @${user.username} deleted successfully.`);
                                     
+                                    // Remove credentials
+                                    if (typeof window !== "undefined") {
+                                      const savedCreds = localStorage.getItem("myshop_credentials");
+                                      if (savedCreds) {
+                                        try {
+                                          const credentials = JSON.parse(savedCreds);
+                                          delete credentials[user.username.toLowerCase()];
+                                          localStorage.setItem("myshop_credentials", JSON.stringify(credentials));
+                                        } catch (e) {}
+                                      }
+                                    }
+                                    logActivity("USER_DELETED", `Deleted staff user @${user.username} (Name: ${user.name})`);
+
                                     // If we deleted the active user, log back in as admin operator
                                     if (currentUser.username === user.username) {
                                       const adminUser = usersList.find((u: any) => u.username === "admin") || usersList[0];
                                       setCurrentUser(adminUser);
-                                      localStorage.setItem("myshop_current_user", JSON.stringify(adminUser));
                                     }
                                   }
                                 }}
@@ -765,8 +783,9 @@ export function DesktopLayout({
                         value={newUserRole}
                         onChange={(e) => setNewUserRole(e.target.value)}
                       >
-                        <option value="Cashier">Cashier (POS Only)</option>
-                        <option value="Manager">Manager (Edit stock/Limits)</option>
+                        <option value="Cashier">Billing Staff / Cashier (POS Only)</option>
+                        <option value="Inventory Clerk">Inventory Clerk (Stock Control)</option>
+                        <option value="Accountant">Accountant (Financial Reports)</option>
                         <option value="Administrator">Administrator (Unrestricted)</option>
                       </select>
                     </div>
@@ -800,10 +819,27 @@ export function DesktopLayout({
                           id: Date.now(),
                           name: newUserName,
                           username: newUserUsername,
-                          role: newUserRole,
-                          status: newUserStatus
+                          role: newUserRole as any,
+                          status: newUserStatus as any
                         };
                         setUsersList([...usersList, newU]);
+                        
+                        // Save credentials hash to the secure store
+                        if (typeof window !== "undefined") {
+                          const savedCreds = localStorage.getItem("myshop_credentials");
+                          let credentials = {};
+                          if (savedCreds) {
+                            try {
+                              credentials = JSON.parse(savedCreds);
+                            } catch (e) {}
+                          }
+                          const defaultPass = newUserUsername.toLowerCase() + "pass";
+                          const hashed = hashPassword(defaultPass);
+                          (credentials as any)[newUserUsername.toLowerCase()] = hashed;
+                          localStorage.setItem("myshop_credentials", JSON.stringify(credentials));
+                        }
+
+                        logActivity("USER_CREATED", `Registered new staff member: ${newUserName} (@${newUserUsername}) with role ${newUserRole}`);
                         toast.success(`User ${newUserName} registered successfully!`);
                         setNewUserName("");
                         setNewUserUsername("");
@@ -824,38 +860,80 @@ export function DesktopLayout({
                     <thead>
                       <tr className="bg-secondary text-primary font-semibold border-b border-border">
                         <th className="p-1 px-2">Module</th>
-                        <th className="p-1">Cashier</th>
-                        <th className="p-1">Manager</th>
+                        <th className="p-1">Billing Staff</th>
+                        <th className="p-1">Inventory Clerk</th>
+                        <th className="p-1">Accountant</th>
                         <th className="p-1">Admin</th>
                       </tr>
                     </thead>
                     <tbody>
                       <tr className="border-b border-border/50">
-                        <td className="p-1.5 px-2 font-semibold">POS Sales Screen</td>
+                        <td className="p-1.5 px-2 font-semibold">POS Billing</td>
                         <td className="p-1.5 text-green-600 font-semibold">Yes</td>
-                        <td className="p-1.5 text-green-600 font-semibold">Yes</td>
+                        <td className="p-1.5 text-red-600 font-semibold">No</td>
+                        <td className="p-1.5 text-red-600 font-semibold">No</td>
                         <td className="p-1.5 text-green-600 font-semibold">Yes</td>
                       </tr>
                       <tr className="border-b border-border/50">
-                        <td className="p-1.5 px-2 font-semibold">Master/Edit Stock Prices</td>
-                        <td className="p-1.5 text-red-600 font-semibold">No</td>
+                        <td className="p-1.5 px-2 font-semibold">Inventory Master</td>
+                        <td className="p-1.5 text-amber-600 font-semibold">View Only</td>
                         <td className="p-1.5 text-green-600 font-semibold">Yes</td>
-                        <td className="p-1.5 text-green-600 font-semibold">Yes</td>
-                      </tr>
-                      <tr className="border-b border-border/50">
-                        <td className="p-1.5 px-2 font-semibold">Purchase Entry</td>
-                        <td className="p-1.5 text-red-600 font-semibold">No</td>
-                        <td className="p-1.5 text-green-600 font-semibold">Yes</td>
+                        <td className="p-1.5 text-amber-600 font-semibold">View Only</td>
                         <td className="p-1.5 text-green-600 font-semibold">Yes</td>
                       </tr>
                       <tr className="border-b border-border/50">
-                        <td className="p-1.5 px-2 font-semibold">Cash ledger / Accounts</td>
+                        <td className="p-1.5 px-2 font-semibold">Manage Suppliers</td>
+                        <td className="p-1.5 text-red-600 font-semibold">No</td>
+                        <td className="p-1.5 text-green-600 font-semibold">Yes</td>
+                        <td className="p-1.5 text-amber-600 font-semibold">View Only</td>
+                        <td className="p-1.5 text-green-600 font-semibold">Yes</td>
+                      </tr>
+                      <tr className="border-b border-border/50">
+                        <td className="p-1.5 px-2 font-semibold">Ledger / Accounts</td>
                         <td className="p-1.5 text-red-600 font-semibold">No</td>
                         <td className="p-1.5 text-red-600 font-semibold">No</td>
+                        <td className="p-1.5 text-green-600 font-semibold">Yes</td>
                         <td className="p-1.5 text-green-600 font-semibold">Yes</td>
                       </tr>
                     </tbody>
                   </table>
+                </div>
+              )}
+
+              {userTab === "audit" && (
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center pb-2 border-b">
+                    <span className="font-semibold text-primary">System Activity Audit Log</span>
+                    <button 
+                      onClick={() => {
+                        if (window.confirm("Are you sure you want to clear the audit logs?")) {
+                          localStorage.setItem("myshop_audit_logs", JSON.stringify([]));
+                          window.location.reload();
+                        }
+                      }}
+                      className="text-destructive hover:underline text-[11px] font-semibold cursor-pointer"
+                    >
+                      Clear Audit Trail
+                    </button>
+                  </div>
+                  <div className="space-y-1.5 max-h-[220px] overflow-y-auto">
+                    {auditLogs.length === 0 ? (
+                      <div className="text-center text-muted-foreground py-6 text-xs">No audit logs recorded yet.</div>
+                    ) : (
+                      auditLogs.map((log: any) => (
+                        <div key={log.id} className="p-2 border border-border/60 bg-muted/10 rounded-sm text-[11.5px] space-y-1">
+                          <div className="flex justify-between text-muted-foreground font-mono text-[10px]">
+                            <span>{new Date(log.timestamp).toLocaleString("en-IN")}</span>
+                            <span>{log.id}</span>
+                          </div>
+                          <div>
+                            <span className="font-semibold text-[#0047BA]">@{log.username}</span> ({log.role}): <span className="font-bold text-foreground bg-primary/10 px-1 rounded-sm text-[10.5px]">{log.actionType}</span>
+                          </div>
+                          <div className="text-slate-600 font-medium">{log.narration}</div>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </div>
               )}
             </div>
@@ -991,11 +1069,30 @@ export function DesktopLayout({
                     key={u.id}
                     type="button"
                     onClick={() => {
+                      const password = window.prompt(`Enter password for @${u.username}:`);
+                      if (password === null) return;
+
+                      const savedCreds = localStorage.getItem("myshop_credentials");
+                      let credentials = {};
+                      if (savedCreds) {
+                        try {
+                          credentials = JSON.parse(savedCreds);
+                        } catch (e) {}
+                      }
+                      const expectedHash = (credentials as any)[u.username.toLowerCase()] || hashPassword(u.username.toLowerCase() + "pass");
+
+                      if (hashPassword(password) !== expectedHash) {
+                        logActivity("LOGIN_FAILURE", `Failed switch user override attempt to @${u.username}`);
+                        toast.error("Incorrect password. Access denied.");
+                        return;
+                      }
+
                       setCurrentUser(u);
                       localStorage.setItem("myshop_current_user", JSON.stringify(u));
+                      logActivity("LOGIN_SUCCESS", `Switched terminal operator to @${u.username} (${u.role})`);
                       toast.success(`Logged into terminal as ${u.name} [${u.role}]`);
                       setSwitchUserOpen(false);
-                      if (u.role === "Cashier") {
+                      if (u.role === "Cashier" || u.role === "Billing Staff") {
                         router.navigate({ to: "/pos" });
                       }
                     }}
@@ -1110,15 +1207,19 @@ export function DesktopLayout({
                       <tbody>
                         <tr>
                           <td className="border border-border p-1 font-semibold">Administrator</td>
-                          <td className="border border-border p-1">Full console access (POS, Ledgers, Backup, Settings, User Management).</td>
+                          <td className="border border-border p-1">Full console access (POS, Ledgers, Backup, Settings, User Management, Expenses).</td>
                         </tr>
                         <tr>
-                          <td className="border border-border p-1 font-semibold">Manager</td>
-                          <td className="border border-border p-1">Inventory management, Marketing, and Backup. Blocked from accounts/expenses.</td>
+                          <td className="border border-border p-1 font-semibold">Billing Staff</td>
+                          <td className="border border-border p-1">POS Billing, Sales Invoices and Quotations creation. View-only access to Items, Customers, and Low Stock.</td>
                         </tr>
                         <tr>
-                          <td className="border border-border p-1 font-semibold">Cashier</td>
-                          <td className="border border-border p-1">POS Billing only. Blocked from all other master settings and accounting sections.</td>
+                          <td className="border border-border p-1 font-semibold">Inventory Clerk</td>
+                          <td className="border border-border p-1">Full access to Inventory Management, Manage Suppliers, and Low Stock records. No sales/billing or reports access.</td>
+                        </tr>
+                        <tr>
+                          <td className="border border-border p-1 font-semibold">Accountant</td>
+                          <td className="border border-border p-1">View-only access to Suppliers, Customers, Inventory, and Low Stock. Full access to Dashboard, Invoices, Ledgers, Reports, and Expenses.</td>
                         </tr>
                       </tbody>
                     </table>
